@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+.temp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Taro
+.taro-doctor/
+
+# WeChat DevTools
+project.private.config.json
+
+# Cloud functions node_modules (each function has its own)
+cloudfunctions/*/node_modules/
+
+# WeChat auto-generated directories
+cloudfunctions/cloud1-*
+cloudfunctions/all

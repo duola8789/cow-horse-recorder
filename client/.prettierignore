@@ -1,0 +1,26 @@
+# 构建产物
+dist/
+build/
+
+# 依赖
+node_modules/
+
+# 小程序编译产物
+.temp/
+.rn_temp/
+
+# 锁文件
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# 日志
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# 其他
+*.min.js
+*.min.css

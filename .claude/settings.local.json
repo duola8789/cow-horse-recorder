@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions:*)",
+      "Bash(npm list:*)",
+      "Bash(for fn:*)",
+      "Bash(do cp:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(do)",
+      "Bash(sed -i '' 's/\"\"main\"\": \"\"index.ts\"\"/\"\"main\"\": \"\"index.js\"\"/' cloudfunctions/$fn/package.json)",
+      "Bash(done)"
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "name": "cow-horse-recorder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "牛马工时记录器",
+  "templateInfo": {
+    "name": "default",
+    "typescript": true,
+    "css": "sass"
+  },
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "build:weapp": "taro build --type weapp",
+    "dev:weapp": "npm run build:weapp -- --watch",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,scss,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,scss,css}\""
+  },
+  "dependencies": {
+    "@antmjs/vantui": "^3.7.0",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/runtime": "^7.24.0",
+    "@tarojs/components": "4.1.11",
+    "@tarojs/helper": "4.1.11",
+    "@tarojs/plugin-framework-react": "^4.1.11",
+    "@tarojs/plugin-platform-weapp": "4.1.11",
+    "@tarojs/react": "4.1.11",
+    "@tarojs/runtime": "4.1.11",
+    "@tarojs/shared": "4.1.11",
+    "@tarojs/taro": "4.1.11",
+    "dayjs": "^1.11.20",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@antmjs/plugin-vantui": "^2.4.2",
+    "@babel/core": "^7.24.0",
+    "@tarojs/cli": "4.1.11",
+    "@tarojs/webpack5-runner": "4.1.11",
+    "@types/node": "^25.5.0",
+    "@types/react": "^18.3.0",
+    "babel-preset-taro": "4.1.11",
+    "less": "^4.6.4",
+    "less-loader": "^12.3.2",
+    "prettier": "^3.8.1",
+    "sass": "^1.80.0",
+    "typescript": "^5.6.0",
+    "webpack": "^5.90.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "commit-work": {
+      "source": "api/git/@commit-work",
+      "sourceType": "git",
+      "computedHash": "215c0ba8ff26a569d23f1a4a7ce075086f94dfbe5698ba5293fa5b7c6cb0cf24"
+    }
+  }
+}

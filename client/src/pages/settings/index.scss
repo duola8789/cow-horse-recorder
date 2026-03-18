@@ -1,0 +1,27 @@
+.settings {
+  padding: 20px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.section {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  padding: 16px 16px 8px;
+}
+
+.section-desc {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  padding: 0 16px 12px;
+}
