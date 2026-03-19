@@ -1,10 +1,21 @@
 import type { Stats as StatsData } from '../../services/api'
+import type { GlobalData } from '@/app'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useState } from 'react'
-import { getStats } from '../../services/api'
+import { getStats, login } from '../../services/api'
 import { getCurrentYearMonth } from '../../utils/date'
 import './index.scss'
+
+// 获取全局登录 Promise 的辅助函数
+async function waitForLogin(): Promise<void> {
+  const app = Taro.getApp<{ globalData: GlobalData }>()
+  if (app?.globalData?.loginPromise) {
+    await app.globalData.loginPromise
+  } else {
+    await login()
+  }
+}
 
 export default function Stats() {
   const [loading, setLoading] = useState(true)
@@ -14,6 +25,9 @@ export default function Stats() {
   const loadStats = useCallback(async () => {
     setLoading(true)
     try {
+      // 等待全局登录完成
+      await waitForLogin()
+
       const result = await getStats(yearMonth.year, yearMonth.month)
       setStats(result)
     }
