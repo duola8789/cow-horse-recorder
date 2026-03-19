@@ -2,74 +2,206 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 20px;
+  padding: 40px 32px;
   min-height: 100vh;
   box-sizing: border-box;
+  background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
 }
 
-.status-card {
-  width: 100%;
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 40px;
-}
-
-.status-title {
-  display: block;
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
+/* 日期头部 */
+.date-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 16px;
 }
 
-.holiday-tag {
-  display: inline-block;
-  background: #ff9800;
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-left: 8px;
+.date-text {
+  font-size: 32px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 12px;
 }
 
-.status-row {
+.day-type-tag {
+  padding: 8px 24px;
+  border-radius: 20px;
+
+  &.workday {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  &.holiday {
+    background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+  }
+
+  .tag-text {
+    font-size: 24px;
+    color: #fff;
+    font-weight: 500;
+  }
+}
+
+/* 实时时钟 */
+.clock-display {
+  margin: 32px 0;
+}
+
+.clock-time {
+  font-size: 96px;
+  font-weight: 300;
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 4px;
+}
+
+/* 上下班切换 Switch */
+.clock-type-switch {
   display: flex;
-  justify-content: space-around;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+  gap: 16px;
+}
+
+.switch-option {
+  font-size: 28px;
+  color: #999;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: color 0.3s ease;
+
+  &.active {
+    color: #333;
+    font-weight: 600;
+  }
+}
+
+.switch-track {
+  width: 100px;
+  height: 48px;
+  background: #e8e8e8;
+  border-radius: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.switch-thumb {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  top: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  &.start {
+    left: 2px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  &.end {
+    left: 54px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  }
+}
+
+/* 打卡按钮 */
+.clock-button {
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+  margin-bottom: 48px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &.start-mode {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  &.end-mode {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  }
+
+  &.loading {
+    opacity: 0.7;
+  }
+
+  &:active {
+    transform: scale(0.96);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .button-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  .button-text {
+    font-size: 36px;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+/* 打卡状态卡片 */
+.status-card {
+  width: 100%;
+  display: flex;
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .status-item {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  .status-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .status-label {
+    font-size: 26px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+
+  .status-time {
+    font-size: 44px;
+    font-weight: 600;
+    color: #999;
+    margin-bottom: 8px;
+  }
+
+  .status-state {
+    font-size: 24px;
+    color: #999;
+  }
+
+  &.checked {
+    .status-time {
+      color: #333;
+    }
+
+    .status-state {
+      color: #52c41a;
+    }
+  }
 }
 
-.status-label {
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 8px;
-}
-
-.status-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-}
-
-.clock-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 40px;
-}
-
-.clock-button {
-  width: 200px !important;
-  height: 200px !important;
-  border-radius: 50% !important;
-  font-size: 24px !important;
-  font-weight: 600 !important;
+.status-divider {
+  width: 2px;
+  background: #f0f0f0;
+  margin: 0 16px;
 }
 
 .switch-link {
