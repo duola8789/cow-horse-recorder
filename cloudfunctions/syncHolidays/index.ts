@@ -1,3 +1,5 @@
+// 使用 got 或 axios 的替代方案，云函数环境下使用内置的 http 模块
+const http = require('node:http')
 // 云函数入口文件
 const cloud = require('wx-server-sdk')
 
@@ -25,38 +27,45 @@ interface TimorApiResponse {
   }>
 }
 
+// HTTP GET 请求封装
+function httpGet(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res: any) => {
+      let data = ''
+      res.on('data', (chunk: string) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        resolve(data)
+      })
+    }).on('error', (err: Error) => {
+      reject(err)
+    })
+  })
+}
+
 // 云函数入口函数
-exports.main = async (event: { year: number }) => {
-  const { year } = event
+exports.main = async (event: { year?: number }) => {
+  // 如果没有传入 year 参数（定时触发器触发），使用下一年
+  const year = event.year ?? (new Date().getFullYear() + 1)
 
   // 从 timor.tech API 获取节假日数据
   // API 文档: http://timor.tech/api/holiday/
   const url = `http://timor.tech/api/holiday/year/${year}`
 
+  console.log('开始同步节假日数据, year:', year, 'url:', url)
+
   try {
-    // 使用云函数内置的 request 能力
-    const response = await new Promise<TimorApiResponse>((resolve, reject) => {
-      const http = require('node:http')
-      http.get(url, (res: any) => {
-        let data = ''
-        res.on('data', (chunk: string) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(data))
-          }
-          catch (e) {
-            reject(e)
-          }
-        })
-      }).on('error', reject)
-    })
+    const responseText = await httpGet(url)
+    console.log('API 响应:', responseText.substring(0, 200))
+
+    const response: TimorApiResponse = JSON.parse(responseText)
 
     if (response.code !== 0) {
+      console.error('API 返回错误:', response)
       return {
         success: false,
-        error: 'API returned error',
+        error: `API returned error code: ${  response.code}`,
       }
     }
 
@@ -76,29 +85,41 @@ exports.main = async (event: { year: number }) => {
       })
     }
 
-    // 清除该年份的旧数据
-    await db.collection('holidays').where({
-      year,
-    }).remove()
+    console.log('解析到节假日数据条数:', holidays.length)
 
-    // 批量插入新数据（云数据库单次最多插入 20 条）
+    // 清除该年份的旧数据
+    try {
+      await db.collection('holidays').where({
+        year,
+      }).remove()
+      console.log('已清除旧数据')
+    } catch (e) {
+      console.log('清除旧数据失败（可能不存在）:', e)
+    }
+
+    // 批量插入新数据
     let count = 0
-    for (let i = 0; i < holidays.length; i += 20) {
-      const batch = holidays.slice(i, i + 20)
-      for (const holiday of batch) {
+    for (const holiday of holidays) {
+      try {
         await db.collection('holidays').add({
           data: holiday,
         })
         count++
+      } catch (e) {
+        console.error('插入数据失败:', holiday, e)
       }
     }
 
+    console.log('同步完成, 插入条数:', count)
+
     return {
       success: true,
+      year,
       count,
     }
   }
   catch (error) {
+    console.error('同步节假日失败:', error)
     return {
       success: false,
       error: String(error),
