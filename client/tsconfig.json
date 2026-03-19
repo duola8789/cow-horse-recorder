@@ -5,7 +5,7 @@
     "lib": ["ES2017", "DOM"],
     "baseUrl": ".",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "paths": {
       "@/*": ["src/*"]
     },

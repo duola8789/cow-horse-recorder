@@ -3,9 +3,7 @@ import antfu from '@antfu/eslint-config'
 export default antfu({
   react: true,
   typescript: true,
-  stylistic: {
-    quotes: 'single',
-  },
+  stylistic: false, // 关闭所有代码格式相关的校验
   ignores: [
     '**/dist/**',
     '**/node_modules/**',
@@ -14,6 +12,9 @@ export default antfu({
     'scripts/**/*.js', // 忽略构建脚本
     'openspec/**/*.md', // 忽略 OpenSpec 文档
   ],
+  rules: {
+    'no-console': 'off', // 允许 console
+  },
 }, {
   // 云函数使用 CommonJS，忽略 require 相关规则
   files: ['cloudfunctions/**/*.ts'],

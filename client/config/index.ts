@@ -63,5 +63,6 @@ export default {
         },
       },
     },
+    esnextModules: ['@antmjs/vantui'],
   },
 } satisfies UserConfigExport

@@ -32,5 +32,6 @@ export default defineAppConfig({
       },
     ],
   },
+  // @ts-expect-error cloud 是微信小程序特有配置
   cloud: true,
 })
