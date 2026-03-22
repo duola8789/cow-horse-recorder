@@ -1,4 +1,5 @@
 export default defineAppConfig({
+  lazyCodeLoading: 'requiredComponents',
   pages: ['pages/index/index', 'pages/stats/index', 'pages/settings/index'],
   window: {
     backgroundTextStyle: 'light',

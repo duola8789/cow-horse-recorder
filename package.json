@@ -13,6 +13,7 @@
     "dev:all": "npm run build:cloud && npm run dev & npm run dev:cloud",
     "build": "cd client && npm run build:weapp",
     "build:cloud": "node scripts/build-cloud.js",
+    "build:all": "npm run build:cloud && npm run build",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
