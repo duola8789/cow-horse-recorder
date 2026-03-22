@@ -4,7 +4,6 @@ import type { User } from '@/services/api'
 import { Picker, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useState } from 'react'
-import { AtList, AtListItem } from 'taro-ui'
 import { login, updateSettings } from '@/services/api'
 import './index.scss'
 
@@ -89,27 +88,41 @@ export default function Settings() {
     }
   }
 
-  const startTimeIndex = timeOptions.indexOf(user?.defaultStartTime || '09:30')
+  // 点击提醒设置项
+  const handleReminderClick = () => {
+    Taro.showToast({
+      title: '功能即将上线，敬请期待',
+      icon: 'none',
+      duration: 2000,
+    })
+  }
+
+  const startTimeIndex = timeOptions.indexOf(user?.defaultStartTime || '09:00')
   const endTimeIndex = timeOptions.indexOf(user?.defaultEndTime || '18:30')
 
   return (
     <View className="settings">
-      <View className="section">
-        <Text className="section-title">默认时间设置</Text>
-        <Text className="section-desc">忘记打卡时，将使用以下默认时间计算工时</Text>
+      {/* 默认时间设置 */}
+      <View className="section-card">
+        <View className="section-header">
+          <Text className="section-icon">⏰</Text>
+          <Text className="section-title">默认时间设置</Text>
+        </View>
+        <Text className="section-desc">忘记打卡时，将使用以下时间计算工时</Text>
 
-        <AtList>
+        <View className="setting-list">
           <Picker
             mode="selector"
             range={timeOptions}
-            value={startTimeIndex >= 0 ? startTimeIndex : 19}
+            value={startTimeIndex >= 0 ? startTimeIndex : 18}
             onChange={handleStartTimeChange}
           >
-            <AtListItem
-              title="默认上班时间"
-              extraText={user?.defaultStartTime || '09:30'}
-              arrow="right"
-            />
+            <View className="setting-item">
+              <Text className="item-icon">☀️</Text>
+              <Text className="item-label">默认上班时间</Text>
+              <Text className="item-value">{user?.defaultStartTime || '09:30'}</Text>
+              <Text className="item-arrow">›</Text>
+            </View>
           </Picker>
           <Picker
             mode="selector"
@@ -117,13 +130,60 @@ export default function Settings() {
             value={endTimeIndex >= 0 ? endTimeIndex : 37}
             onChange={handleEndTimeChange}
           >
-            <AtListItem
-              title="默认下班时间"
-              extraText={user?.defaultEndTime || '18:30'}
-              arrow="right"
-            />
+            <View className="setting-item">
+              <Text className="item-icon">🌙</Text>
+              <Text className="item-label">默认下班时间</Text>
+              <Text className="item-value">{user?.defaultEndTime || '18:30'}</Text>
+              <Text className="item-arrow">›</Text>
+            </View>
           </Picker>
-        </AtList>
+        </View>
+      </View>
+
+      {/* 打卡提醒 */}
+      <View className="section-card">
+        <View className="section-header">
+          <Text className="section-icon">🔔</Text>
+          <Text className="section-title">打卡提醒</Text>
+        </View>
+        <Text className="section-desc">开启后将在对应时间发送微信通知提醒打卡</Text>
+
+        <View className="setting-list">
+          <View className="setting-item" onClick={handleReminderClick}>
+            <Text className="item-icon">☀️</Text>
+            <Text className="item-label">上班打卡提醒</Text>
+            <Text className="item-value coming-soon">即将上线</Text>
+            <Text className="item-arrow">›</Text>
+          </View>
+          <View className="setting-item" onClick={handleReminderClick}>
+            <Text className="item-icon">🌙</Text>
+            <Text className="item-label">下班打卡提醒</Text>
+            <Text className="item-value coming-soon">即将上线</Text>
+            <Text className="item-arrow">›</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* 关于 */}
+      <View className="section-card">
+        <View className="section-header">
+          <Text className="section-icon">ℹ️</Text>
+          <Text className="section-title">关于</Text>
+        </View>
+
+        <View className="setting-list about-version">
+          <View className="setting-item">
+            <Text className="item-icon">📱</Text>
+            <Text className="item-label">当前版本</Text>
+            <Text className="item-value">v{APP_VERSION}</Text>
+          </View>
+        </View>
+
+        <View className="about-content">
+          <Text className="about-emoji">🐮🐴</Text>
+          <Text className="about-name">牛马工时记录器</Text>
+          <Text className="about-slogan">珍惜卖命的每一秒</Text>
+        </View>
       </View>
     </View>
   )

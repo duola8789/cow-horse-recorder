@@ -1,5 +1,10 @@
 import type { UserConfigExport } from '@tarojs/cli'
+import * as fs from 'node:fs'
 import * as path from 'node:path'
+
+// 读取 package.json 中的版本号
+const pkgPath = path.resolve(__dirname, '..', 'package.json')
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
 
 export default {
   projectName: 'cow-horse-recorder',
@@ -14,7 +19,9 @@ export default {
   sourceRoot: 'src',
   outputRoot: 'dist',
   plugins: [],
-  defineConstants: {},
+  defineConstants: {
+    APP_VERSION: JSON.stringify(pkg.version),
+  },
   copy: {
     patterns: [],
     options: {},

@@ -1,27 +1,118 @@
 .settings {
-  padding: 20px;
   min-height: 100vh;
   box-sizing: border-box;
+  background: linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%);
+  padding: 40px 24px;
+  padding-bottom: 120px;
 }
 
-.section {
+/* 通用卡片样式 */
+.section-card {
   background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-icon {
+  font-size: 32px;
 }
 
 .section-title {
-  display: block;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 30px;
+  font-weight: 600;
   color: #333;
-  padding: 16px 16px 8px;
 }
 
 .section-desc {
-  display: block;
-  font-size: 12px;
+  font-size: 24px;
   color: #999;
-  padding: 0 16px 12px;
+  margin-bottom: 16px;
+}
+
+/* 设置项列表 */
+.setting-list {
+  background: #f8f9ff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  background: #f8f9ff;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #eef0f5;
+  }
+
+  &:active {
+    background: #eef0f5;
+  }
+}
+
+.item-icon {
+  font-size: 28px;
+  margin-right: 16px;
+  line-height: 1;
+}
+
+.item-label {
+  flex: 1;
+  font-size: 28px;
+  color: #333;
+}
+
+.item-value {
+  font-size: 28px;
+  color: #666;
+  margin-right: 8px;
+
+  &.coming-soon {
+    color: #999;
+    font-size: 24px;
+  }
+}
+
+.item-arrow {
+  font-size: 24px;
+  color: #ccc;
+}
+
+/* 关于区块 */
+.about-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 0 16px;
+}
+
+.about-emoji {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.about-name {
+  font-size: 32px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.about-slogan {
+  font-size: 24px;
+  color: #999;
+}
+
+.about-version {
+  margin-bottom: 24px;
 }
