@@ -1,6 +1,6 @@
 "use strict";
 // 云函数入口文件
-const cloud = require('wx-server-sdk');
+const cloud = require("wx-server-sdk");
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV,
 });
@@ -18,7 +18,7 @@ function isWeekend(date) {
 }
 // 解析时间字符串 "HH:mm" 到当天的 Date
 function parseTimeToDate(timeStr, baseDate) {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const [hours, minutes] = timeStr.split(":").map(Number);
     return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
 }
 // 计算两个时间之间的分钟数
@@ -48,28 +48,34 @@ exports.main = async (event) => {
     // 实际统计结束日期（取月末和昨天的较小值）
     const actualEndDate = statsEndDate < monthEnd ? statsEndDate : monthEnd;
     // 获取用户设置
-    const userRes = await db.collection('users').where({
+    const userRes = await db
+        .collection("users")
+        .where({
         _openid: openid,
-    }).get();
+    })
+        .get();
     const user = userRes.data[0];
-    const defaultStartTime = user?.defaultStartTime || '09:30';
-    const defaultEndTime = user?.defaultEndTime || '18:30';
+    const defaultStartTime = user?.defaultStartTime || "09:30";
+    const defaultEndTime = user?.defaultEndTime || "18:30";
     // 获取本月的节假日数据
-    const holidayRes = await db.collection('holidays').where({
+    const holidayRes = await db
+        .collection("holidays")
+        .where({
         date: _.gte(monthStart).and(_.lte(actualEndDate)),
-    }).get();
+    })
+        .get();
     const holidays = holidayRes.data;
-    const holidayMap = new Map(holidays.map(h => [h.date.getTime(), h.type]));
+    const holidayMap = new Map(holidays.map((h) => [h.date.getTime(), h.type]));
     // 计算工作日列表
     const workdays = [];
     const current = new Date(monthStart);
     while (current <= actualEndDate) {
         const holidayType = holidayMap.get(current.getTime());
-        if (holidayType === 'workday') {
+        if (holidayType === "workday") {
             // 调休工作日
             workdays.push(new Date(current));
         }
-        else if (holidayType === 'holiday') {
+        else if (holidayType === "holiday") {
             // 节假日，不是工作日
         }
         else if (!isWeekend(current)) {
@@ -79,13 +85,16 @@ exports.main = async (event) => {
         current.setDate(current.getDate() + 1);
     }
     // 获取打卡记录
-    const recordRes = await db.collection('clock_records').where({
+    const recordRes = await db
+        .collection("clock_records")
+        .where({
         _openid: openid,
         date: _.gte(monthStart).and(_.lte(actualEndDate)),
-        status: 'normal', // 只统计正常状态，排除请假
-    }).get();
+        status: "normal", // 只统计正常状态，排除请假
+    })
+        .get();
     const records = recordRes.data;
-    const recordMap = new Map(records.map(r => [r.date.getTime(), r]));
+    const recordMap = new Map(records.map((r) => [r.date.getTime(), r]));
     // 计算总工时
     let totalMinutes = 0;
     let recordedDays = 0;
@@ -106,9 +115,9 @@ exports.main = async (event) => {
             totalMinutes += minutes;
         }
     }
-    const totalHours = Math.round(totalMinutes / 60 * 100) / 100;
+    const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
     const avgHoursPerDay = workdays.length > 0
-        ? Math.round(totalMinutes / 60 / workdays.length * 100) / 100
+        ? Math.round((totalMinutes / 60 / workdays.length) * 100) / 100
         : 0;
     return {
         success: true,

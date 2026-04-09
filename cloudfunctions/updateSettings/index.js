@@ -1,6 +1,6 @@
 "use strict";
 // 云函数入口文件
-const cloud = require('wx-server-sdk');
+const cloud = require("wx-server-sdk");
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV,
 });
@@ -10,13 +10,16 @@ exports.main = async (event) => {
     const wxContext = cloud.getWXContext();
     const openid = wxContext.OPENID;
     // 查询用户
-    const userRes = await db.collection('users').where({
+    const userRes = await db
+        .collection("users")
+        .where({
         _openid: openid,
-    }).get();
+    })
+        .get();
     if (userRes.data.length === 0) {
         return {
             success: false,
-            error: 'User not found',
+            error: "User not found",
         };
     }
     const user = userRes.data[0];
@@ -32,7 +35,7 @@ exports.main = async (event) => {
         updateData.defaultEndTime = event.defaultEndTime;
     }
     // 更新用户设置
-    await db.collection('users').doc(user._id).update({
+    await db.collection("users").doc(user._id).update({
         data: updateData,
     });
     return {
