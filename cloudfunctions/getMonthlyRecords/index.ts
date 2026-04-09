@@ -84,12 +84,14 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-// 格式化时间为 HH:mm
+// 格式化时间为 HH:mm (转换为北京时间 UTC+8)
 function formatTime(date: Date | null): string | null {
   if (!date) return null;
   const d = new Date(date);
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
+  // UTC+8 偏移
+  const utc8 = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+  const hours = String(utc8.getUTCHours()).padStart(2, "0");
+  const minutes = String(utc8.getUTCMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 
@@ -131,6 +133,8 @@ exports.main = async (event: { year: number; month: number }) => {
   const today = getToday();
   const monthStart = new Date(year, month - 1, 1);
   const monthEnd = new Date(year, month, 0); // 月末
+  // 只显示到当天，不显示未来日期
+  const displayEnd = monthEnd < today ? monthEnd : today;
 
   // 获取用户设置
   const userRes = await db
@@ -185,7 +189,7 @@ exports.main = async (event: { year: number; month: number }) => {
   // T+1: 统计截止到昨天
   const statsEndDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
-  while (current <= monthEnd) {
+  while (current <= displayEnd) {
     const dateKey = formatDateKey(current);
     const holidayType = holidayMap.get(dateKey);
     const clockRecord = recordMap.get(dateKey);
@@ -218,6 +222,54 @@ exports.main = async (event: { year: number; month: number }) => {
         endTime = formatTime(clockRecord.endTime);
         startFrom = clockRecord.startTime ? "clock" : null;
         endFrom = clockRecord.endTime ? "clock" : null;
+      }
+
+      // 计算当天工作时长
+      // 注意：云函数运行在 UTC 时区，需要转换为北京时间 (UTC+8) 进行比较
+      const nowUtc = new Date();
+      const nowUtc8 = new Date(nowUtc.getTime() + 8 * 60 * 60 * 1000);
+      // 构造今天的默认下班时间点（北京时间）
+      const [defEndHour, defEndMin] = defaultEndTime.split(":").map(Number);
+      const defaultEndDateUtc8 = new Date(
+        nowUtc8.getUTCFullYear(),
+        nowUtc8.getUTCMonth(),
+        nowUtc8.getUTCDate(),
+        defEndHour,
+        defEndMin,
+      );
+
+      if (clockRecord?.startTime) {
+        const actualStart = new Date(clockRecord.startTime);
+        let actualEnd: Date;
+
+        if (clockRecord.endTime) {
+          // 有下班卡
+          actualEnd = new Date(clockRecord.endTime);
+        } else if (nowUtc8 < defaultEndDateUtc8) {
+          // 无下班卡，当前时间未超过默认下班时间
+          actualEnd = nowUtc;
+        } else {
+          // 无下班卡，当前时间已超过默认下班时间
+          // 需要将默认下班时间转回 UTC 用于计算
+          actualEnd = new Date(
+            defaultEndDateUtc8.getTime() - 8 * 60 * 60 * 1000,
+          );
+        }
+
+        const mins = diffMinutes(actualStart, actualEnd);
+        if (mins > 0) {
+          minutes = mins;
+          hours = Math.round((mins / 60) * 100) / 100;
+        }
+      } else if (clockRecord?.endTime) {
+        // 无上班卡，有下班卡
+        const actualStart = parseTimeToDate(defaultStartTime, current);
+        const actualEnd = new Date(clockRecord.endTime);
+        const mins = diffMinutes(actualStart, actualEnd);
+        if (mins > 0) {
+          minutes = mins;
+          hours = Math.round((mins / 60) * 100) / 100;
+        }
       }
     } else if (!isWorkday) {
       // 休息日
