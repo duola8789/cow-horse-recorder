@@ -3,6 +3,7 @@
 当前统计页面（`client/src/pages/stats/`）只展示4个汇总数字：工作日、已记录、总工时、日均工时。后端 `getStats` 接口只返回这些汇总数据，不包含每日明细。
 
 打卡首页已建立了设计规范：
+
 - 色彩：紫色渐变（#667eea → #764ba2）、绿色渐变（#11998e → #38ef7d）
 - 卡片：白底、圆角 24px、阴影 `0 4px 16px rgba(0,0,0,0.06)`
 - 背景：渐变 `#f8f9ff → #ffffff`
@@ -12,6 +13,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 重新设计统计页面，实现三级钻取：月度概览 → 每日列表（同页展开） → 单日详情（底部弹窗）
 - 日均工时作为核心指标突出展示
 - 支持月份切换，可查看历史数据
@@ -19,6 +21,7 @@
 - 保持与打卡首页一致的视觉风格
 
 **Non-Goals:**
+
 - 本次不实现编辑/补录功能（预留入口，下版本实现）
 - 不实现数据导出功能
 - 不修改原有 `getStats` 接口（保持兼容）
@@ -30,6 +33,7 @@
 **决定**: 采用同一页面内的展开/收起模式，而非多页面跳转
 
 **理由**:
+
 - 用户操作更流畅，无需等待页面加载
 - 保持上下文，随时可以收起回到概览
 - 小程序中页面跳转有感知延迟
@@ -41,6 +45,7 @@
 **决定**: 使用 Taro 的半屏弹窗展示单日详情
 
 **理由**:
+
 - 符合移动端交互习惯
 - 不丢失列表上下文
 - 可以快速关闭继续浏览其他日期
@@ -52,27 +57,29 @@
 **决定**: 新增 `getMonthlyRecords` 云函数，保留 `getStats`
 
 **理由**:
+
 - `getStats` 职责清晰，只返回汇总数据
 - 每日明细数据量较大，按需加载
 - 保持向后兼容
 
 **接口设计**:
+
 ```typescript
 interface DailyRecord {
-  date: string              // "2026-03-19"
-  day: number               // 19
-  dayOfWeek: number         // 3 (0=周日, 1-6=周一至周六)
-  isWorkday: boolean
-  isToday: boolean
-  status: 'recorded' | 'partial' | 'default' | 'missing' | 'rest' | 'leave'
-  startTime: string | null      // "09:28"
-  endTime: string | null        // "18:45"  
-  startFrom: 'clock' | 'default' | null
-  endFrom: 'clock' | 'default' | null
-  defaultStartTime: string      // "09:30"
-  defaultEndTime: string        // "18:30"
-  hours: number | null          // 9.28
-  minutes: number | null        // 557
+  date: string; // "2026-03-19"
+  day: number; // 19
+  dayOfWeek: number; // 3 (0=周日, 1-6=周一至周六)
+  isWorkday: boolean;
+  isToday: boolean;
+  status: "recorded" | "partial" | "default" | "missing" | "rest" | "leave";
+  startTime: string | null; // "09:28"
+  endTime: string | null; // "18:45"
+  startFrom: "clock" | "default" | null;
+  endFrom: "clock" | "default" | null;
+  defaultStartTime: string; // "09:30"
+  defaultEndTime: string; // "18:30"
+  hours: number | null; // 9.28
+  minutes: number | null; // 557
 }
 ```
 
@@ -80,14 +87,14 @@ interface DailyRecord {
 
 **决定**: 在后端计算每日状态，前端直接使用
 
-| 条件 | status |
-|------|--------|
-| 今天 | `'today'` |
-| 非工作日（周末/节假日） | `'rest'` |
-| 请假 | `'leave'` |
-| 工作日，有打卡记录（任一） | `'recorded'` 或 `'partial'` |
-| 工作日，无打卡但有默认时间 | `'default'` |
-| 工作日，无打卡且无法使用默认 | `'missing'` |
+| 条件                         | status                      |
+| ---------------------------- | --------------------------- |
+| 今天                         | `'today'`                   |
+| 非工作日（周末/节假日）      | `'rest'`                    |
+| 请假                         | `'leave'`                   |
+| 工作日，有打卡记录（任一）   | `'recorded'` 或 `'partial'` |
+| 工作日，无打卡但有默认时间   | `'default'`                 |
+| 工作日，无打卡且无法使用默认 | `'missing'`                 |
 
 **理由**: 后端统一处理，避免前端重复计算，保证状态一致性
 
@@ -95,28 +102,32 @@ interface DailyRecord {
 
 **决定**: 复用打卡首页的设计系统
 
-| 元素 | 样式 |
-|------|------|
-| 页面背景 | `linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%)` |
-| 卡片 | 白底, `border-radius: 24px`, `box-shadow: 0 4px 16px rgba(0,0,0,0.06)` |
-| 月份选择器 | 紫色渐变底，白色文字，左右箭头切换 |
-| 核心指标 | 大号数字（96px），与首页时钟一致 |
-| 状态标识 | 🟢 绿色 #52c41a / 🟡 橙色 #faad14 / 🔴 红色 #ff4d4f |
+| 元素       | 样式                                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| 页面背景   | `linear-gradient(180deg, #f8f9ff 0%, #ffffff 100%)`                    |
+| 卡片       | 白底, `border-radius: 24px`, `box-shadow: 0 4px 16px rgba(0,0,0,0.06)` |
+| 月份选择器 | 紫色渐变底，白色文字，左右箭头切换                                     |
+| 核心指标   | 大号数字（96px），与首页时钟一致                                       |
+| 状态标识   | 🟢 绿色 #52c41a / 🟡 橙色 #faad14 / 🔴 红色 #ff4d4f                    |
 
 ## Risks / Trade-offs
 
 ### [性能] 每日明细数据量
+
 **风险**: 一个月最多31天数据，加上完整的打卡信息，响应体较大
 **缓解**: 数据结构精简，只返回必要字段；考虑后续增加分页（暂不需要）
 
 ### [UX] 长列表滚动
+
 **风险**: 展开每日列表后，页面变长，可能影响滚动体验
 **缓解**: 使用 ScrollView 包裹列表区域；提供快速回到顶部的方式
 
 ### [复杂度] 状态计算边界情况
+
 **风险**: 调休、节假日、请假等状态组合复杂
 **缓解**: 后端集中处理，前端只负责展示；充分测试边界情况
 
 ### [兼容性] 历史数据
+
 **风险**: 用户查看很早之前的月份，可能没有打卡记录
 **缓解**: 统一使用默认时间兜底；超出数据范围时显示空状态

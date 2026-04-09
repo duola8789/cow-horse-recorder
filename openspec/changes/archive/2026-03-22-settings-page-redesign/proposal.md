@@ -12,9 +12,11 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `settings-ui`: 设置页面的 UI 组件和样式，包含默认时间、提醒设置、关于信息三个区块
 
 ### Modified Capabilities
+
 <!-- 无需修改现有 specs，时间设置功能保持不变 -->
 
 ## Impact

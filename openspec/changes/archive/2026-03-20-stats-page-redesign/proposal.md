@@ -16,12 +16,14 @@
 ## Capabilities
 
 ### New Capabilities
+
 - `stats-monthly-view`: 月度统计概览，包含日均工时核心指标、工作日/已记录天数、总工时，支持月份切换
 - `stats-daily-list`: 每日明细列表，展示当月每天的工时数据和打卡状态，支持展开/收起
 - `stats-daily-detail`: 单日详情弹窗，展示具体上下班时间、打卡来源（打卡/默认）、工作时长
 - `stats-api`: 后端接口，提供月度每日明细数据，包含状态标识和汇总统计
 
 ### Modified Capabilities
+
 <!-- 无现有 spec 需要修改 -->
 
 ## Impact
