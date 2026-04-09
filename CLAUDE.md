@@ -62,11 +62,13 @@ npm run dev:all
 ### 部署方式
 
 编译完成后，通过微信开发者工具右键上传：
+
 1. 在开发者工具中打开 cloudfunctions 目录
 2. 右键点击要部署的云函数
 3. 选择"上传并部署：云端安装依赖"
 
 ### 函数列表
+
 - login - 登录
 - clock - 打卡
 - getStats - 月度统计
@@ -77,6 +79,7 @@ npm run dev:all
 ## 数据库
 
 使用微信云数据库（文档型）：
+
 - users - 用户表
 - clock_records - 打卡记录
 - holidays - 节假日
@@ -91,15 +94,16 @@ npm run dev:all
 
 ```json
 {
-  "semi": false,           // 不使用分号
-  "singleQuote": true,     // 使用单引号
-  "tabWidth": 2,           // 缩进 2 空格
-  "trailingComma": "es5",  // ES5 兼容的尾随逗号
-  "printWidth": 100        // 每行最大 100 字符
+  "semi": false, // 不使用分号
+  "singleQuote": true, // 使用单引号
+  "tabWidth": 2, // 缩进 2 空格
+  "trailingComma": "es5", // ES5 兼容的尾随逗号
+  "printWidth": 100 // 每行最大 100 字符
 }
 ```
 
 **格式化命令：**
+
 ```bash
 cd client
 npm run format        # 格式化所有文件
@@ -112,14 +116,15 @@ npm run format:check  # 检查格式（不修改）
 
 ```tsx
 // ✅ 推荐 - 使用 @ 别名
-import { login } from '@/services/api'
-import { formatTime } from '@/utils/date'
+import { login } from "@/services/api";
+import { formatTime } from "@/utils/date";
 
 // ❌ 避免 - 相对路径（层级深时难维护）
-import { login } from '../../services/api'
+import { login } from "../../services/api";
 ```
 
 **别名配置位置：**
+
 - Taro 配置：`client/config/index.ts` 中的 `alias` 字段
 - TypeScript：`client/tsconfig.json` 中的 `paths` 字段
 

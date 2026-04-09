@@ -37,3 +37,7 @@ cloudfunctions/*/node_modules/
 # WeChat auto-generated directories
 cloudfunctions/cloud1-*
 cloudfunctions/all
+
+# Local AI assistant config
+.agents/
+.claude/
