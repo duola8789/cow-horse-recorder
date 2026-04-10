@@ -77,7 +77,7 @@ export default function Stats() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<MonthlyRecordsResponse | null>(null)
   const [yearMonth, setYearMonth] = useState(getCurrentYearMonth())
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
   const [selectedRecord, setSelectedRecord] = useState<DailyRecord | null>(null)
   const [sheetVisible, setSheetVisible] = useState(false)
   const [isFirstLoad, setIsFirstLoad] = useState(true)
