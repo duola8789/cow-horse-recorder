@@ -73,6 +73,9 @@ function getStatusText(record: DailyRecord): string {
   return '—'
 }
 
+// 内存缓存：按 year-month 存储数据
+const dataCache = new Map<string, MonthlyRecordsResponse>()
+
 export default function Stats() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<MonthlyRecordsResponse | null>(null)
@@ -82,23 +85,38 @@ export default function Stats() {
   const [sheetVisible, setSheetVisible] = useState(false)
   const [isFirstLoad, setIsFirstLoad] = useState(true)
 
+  const cacheKey = `${yearMonth.year}-${yearMonth.month}`
+
   const loadData = useCallback(
     async (showLoading = true) => {
+      // 如果有缓存且不需要显示 loading，先用缓存数据
+      const cached = dataCache.get(cacheKey)
+      if (cached && !showLoading) {
+        setData(cached)
+        setLoading(false)
+      }
+
       if (showLoading) {
         setLoading(true)
       }
+
       try {
         await waitForLogin()
         const result = await getMonthlyRecords(yearMonth.year, yearMonth.month)
+        // 更新缓存
+        dataCache.set(cacheKey, result)
         setData(result)
       } catch (error) {
         console.error('加载统计失败:', error)
-        Taro.showToast({ title: '加载失败', icon: 'error' })
+        // 只在没有缓存数据时显示错误
+        if (!cached) {
+          Taro.showToast({ title: '加载失败', icon: 'error' })
+        }
       } finally {
         setLoading(false)
       }
     },
-    [yearMonth]
+    [yearMonth, cacheKey]
   )
 
   // 页面显示时加载数据（从其他页面返回时刷新）
@@ -108,14 +126,29 @@ export default function Stats() {
       setIsFirstLoad(false)
       return
     }
-    // 非首次加载，静默刷新数据
+    // 非首次加载：先显示缓存，后台静默刷新
+    const cached = dataCache.get(cacheKey)
+    if (cached) {
+      setData(cached)
+      setLoading(false)
+    }
     loadData(false)
   })
 
   // 首次加载或月份变化时加载数据
   useEffect(() => {
-    loadData()
-  }, [yearMonth.year, yearMonth.month, loadData])
+    // 检查是否有缓存
+    const cached = dataCache.get(cacheKey)
+    if (cached) {
+      // 有缓存：立即显示，后台刷新
+      setData(cached)
+      setLoading(false)
+      loadData(false)
+    } else {
+      // 无缓存：显示 loading
+      loadData(true)
+    }
+  }, [yearMonth.year, yearMonth.month, cacheKey])
 
   // 切换到上个月
   const handlePrevMonth = () => {
