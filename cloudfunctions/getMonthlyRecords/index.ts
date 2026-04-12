@@ -96,11 +96,43 @@ function formatDate(date: Date): string {
 }
 
 // 格式化时间为 HH:mm (转换为北京时间 UTC+8)
-function formatTime(date: Date | null): string | null {
+// 微信云数据库返回的 Date 字段内部存储的是 UTC 时间戳
+// 需要手动转换为北京时间显示
+function formatTime(date: Date | unknown): string | null {
   if (!date) return null;
-  const d = new Date(date);
-  // UTC+8 偏移
-  const utc8 = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+
+  let timestamp: number;
+
+  if (date instanceof Date) {
+    // 如果是 Date 对象，直接获取时间戳
+    timestamp = date.getTime();
+  } else if (typeof date === "number") {
+    // 如果是数字时间戳
+    timestamp = date;
+  } else if (typeof date === "string") {
+    // 如果是字符串，需要判断是否带时区
+    if (date.includes("Z") || date.includes("+") || date.includes("T")) {
+      // ISO 格式或带时区，直接解析
+      timestamp = new Date(date).getTime();
+    } else {
+      // 无时区的本地时间字符串，需要当作北京时间处理
+      // 云数据库可能返回 "2026-04-10 19:45:26" 这种格式
+      // 这实际上是北京时间，不需要再转换
+      const parts = date.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+      if (parts) {
+        const hours = parts[4].padStart(2, "0");
+        const minutes = parts[5].padStart(2, "0");
+        return `${hours}:${minutes}`;
+      }
+      timestamp = new Date(date).getTime();
+    }
+  } else {
+    // 其他情况，尝试转换
+    timestamp = new Date(date as any).getTime();
+  }
+
+  // 将 UTC 时间戳转换为北京时间
+  const utc8 = new Date(timestamp + BEIJING_OFFSET_MS);
   const hours = String(utc8.getUTCHours()).padStart(2, "0");
   const minutes = String(utc8.getUTCMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
@@ -124,15 +156,13 @@ function diffMinutes(start: Date, end: Date): number {
 }
 
 // 云函数入口函数
-exports.main = async (event: { year: number; month: number }) => {
+exports.main = async (event: { year?: unknown; month?: unknown }) => {
   const wxContext = cloud.getWXContext();
   const openid = wxContext.OPENID!;
   const { year, month } = event;
 
-  // P2 fix: 参数校验
+  // 参数校验
   if (
-    !year ||
-    !month ||
     typeof year !== "number" ||
     typeof month !== "number" ||
     month < 1 ||
