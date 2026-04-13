@@ -1,7 +1,7 @@
 import type { GlobalData } from '@/app'
 import type { ClockRecord } from '@/services/api'
 import { Text, View } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { clock, getTodayStatus, login } from '@/services/api'
 import {
@@ -54,9 +54,14 @@ export default function Index() {
   const duration = workMinutes !== null ? formatDuration(workMinutes) : null
   const hasClockRecord = record?.startTime || record?.endTime
 
+  // 是否已初始化过
+  const [initialized, setInitialized] = useState(false)
+
   // 初始化
-  const init = useCallback(async () => {
-    setPageLoading(true)
+  const init = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setPageLoading(true)
+    }
     try {
       // 等待全局登录完成
       await waitForLogin()
@@ -76,14 +81,29 @@ export default function Index() {
       }
     } catch (error) {
       console.error('初始化失败:', error)
-      Taro.showToast({ title: '加载失败', icon: 'error' })
+      if (showLoading) {
+        Taro.showToast({ title: '加载失败', icon: 'error' })
+      }
     } finally {
       setPageLoading(false)
+      setInitialized(true)
     }
   }, [])
 
   useDidShow(() => {
-    init()
+    if (initialized) {
+      // 已初始化过，静默刷新
+      init(false)
+    } else {
+      // 首次加载，显示 loading
+      init(true)
+    }
+  })
+
+  // 下拉刷新
+  usePullDownRefresh(async () => {
+    await init(false)
+    Taro.stopPullDownRefresh()
   })
 
   // 切换打卡类型
