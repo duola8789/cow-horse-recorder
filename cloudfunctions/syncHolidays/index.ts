@@ -1,7 +1,12 @@
-// 使用 got 或 axios 的替代方案，云函数环境下使用内置的 http 模块
+// 使用 got 或 axios 的替代方案，云函数环境下使用内置的 http 模版
 const http = require("node:http");
 // 云函数入口文件
 const cloud = require("wx-server-sdk");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -10,7 +15,7 @@ cloud.init({
 const db = cloud.database();
 
 interface Holiday {
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   year: number;
   type: "workday" | "holiday";
   name?: string;
@@ -80,7 +85,7 @@ exports.main = async (event: { year?: number }) => {
     for (const [dateStr, info] of Object.entries(response.holiday)) {
       // dateStr 格式: "01-01" 或 "01-24"
       const [month, day] = dateStr.split("-").map(Number);
-      const date = new Date(year, month - 1, day);
+      const date = dayjs(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`).format("YYYY-MM-DD");
 
       holidays.push({
         date,

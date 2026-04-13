@@ -1,31 +1,21 @@
 "use strict";
 // 云函数入口文件
 const cloud = require("wx-server-sdk");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+dayjs.extend(utc);
+dayjs.extend(timezone);
 cloud.init({
     env: cloud.DYNAMIC_CURRENT_ENV,
 });
 const db = cloud.database();
-// 北京时间偏移量 (UTC+8)
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
-// 获取北京时间的今天 00:00:00 (UTC+8)
-// 云函数运行在 UTC 时区，需要手动转换
-function getToday() {
-    const now = new Date();
-    // 转换为北京时间
-    const beijingTime = new Date(now.getTime() + BEIJING_OFFSET_MS);
-    // 获取北京时间的年月日
-    const year = beijingTime.getUTCFullYear();
-    const month = beijingTime.getUTCMonth();
-    const day = beijingTime.getUTCDate();
-    // 返回北京时间当天 00:00:00 对应的 UTC 时间
-    return new Date(Date.UTC(year, month, day) - BEIJING_OFFSET_MS);
-}
 // 云函数入口函数
 exports.main = async (event) => {
     const wxContext = cloud.getWXContext();
     const openid = wxContext.OPENID;
     const now = new Date();
-    const today = getToday();
+    const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
     // 查询今日打卡记录
     const recordRes = await db
         .collection("clock_records")

@@ -6,6 +6,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "dayjs": "^1.11.20",
     "wx-server-sdk": "~2.6.3"
   },
   "devDependencies": {

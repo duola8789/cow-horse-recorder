@@ -1,5 +1,10 @@
 // 云函数入口文件
 const cloud = require("wx-server-sdk");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -10,7 +15,7 @@ const db = cloud.database();
 interface ClockRecord {
   _id: string;
   _openid: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   startTime: Date | null;
   endTime: Date | null;
   startFrom: "clock" | "default";
@@ -22,7 +27,7 @@ interface ClockRecord {
 
 interface Holiday {
   _id: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   type: "workday" | "holiday";
   name?: string;
 }
@@ -34,26 +39,9 @@ interface User {
   defaultEndTime: string;
 }
 
-// 北京时间偏移量 (UTC+8)
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-// 获取北京时间的今天 00:00:00 (UTC+8)
-// 云函数运行在 UTC 时区，需要手动转换
-function getToday(): Date {
-  const now = new Date();
-  // 转换为北京时间
-  const beijingTime = new Date(now.getTime() + BEIJING_OFFSET_MS);
-  // 获取北京时间的年月日
-  const year = beijingTime.getUTCFullYear();
-  const month = beijingTime.getUTCMonth();
-  const day = beijingTime.getUTCDate();
-  // 返回北京时间当天 00:00:00 对应的 UTC 时间
-  return new Date(Date.UTC(year, month, day) - BEIJING_OFFSET_MS);
-}
-
 // 判断是否是周末
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
+function isWeekend(dateStr: string): boolean {
+  const day = dayjs(dateStr).day();
   return day === 0 || day === 6;
 }
 
@@ -61,7 +49,7 @@ function isWeekend(date: Date): boolean {
 exports.main = async () => {
   const wxContext = cloud.getWXContext();
   const openid = wxContext.OPENID!;
-  const today = getToday();
+  const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
 
   // 查询用户设置
   const userRes = await db

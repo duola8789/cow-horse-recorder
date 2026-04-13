@@ -1,5 +1,10 @@
 // 云函数入口文件
 const cloud = require("wx-server-sdk");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -11,7 +16,7 @@ const _ = db.command;
 interface ClockRecord {
   _id: string;
   _openid: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   startTime: Date | null;
   endTime: Date | null;
   startFrom: "clock" | "default";
@@ -28,43 +33,19 @@ interface User {
 
 interface Holiday {
   _id: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   type: "workday" | "holiday";
 }
 
-// 北京时间偏移量 (UTC+8)
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-// 获取北京时间的今天 00:00:00 (UTC+8)
-// 云函数运行在 UTC 时区，需要手动转换
-function getToday(): Date {
-  const now = new Date();
-  // 转换为北京时间
-  const beijingTime = new Date(now.getTime() + BEIJING_OFFSET_MS);
-  // 获取北京时间的年月日
-  const year = beijingTime.getUTCFullYear();
-  const month = beijingTime.getUTCMonth();
-  const day = beijingTime.getUTCDate();
-  // 返回北京时间当天 00:00:00 对应的 UTC 时间
-  return new Date(Date.UTC(year, month, day) - BEIJING_OFFSET_MS);
-}
-
 // 判断是否是周末
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
+function isWeekend(dateStr: string): boolean {
+  const day = dayjs(dateStr).day();
   return day === 0 || day === 6;
 }
 
-// 解析时间字符串 "HH:mm" 到当天的 Date
-function parseTimeToDate(timeStr: string, baseDate: Date): Date {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return new Date(
-    baseDate.getFullYear(),
-    baseDate.getMonth(),
-    baseDate.getDate(),
-    hours,
-    minutes,
-  );
+// 将时间字符串 "HH:mm" 转为指定日期的 Date 对象（北京时间）
+function parseTimeToDate(timeStr: string, dateStr: string): Date {
+  return dayjs.tz(`${dateStr} ${timeStr}`, "Asia/Shanghai").toDate();
 }
 
 // 计算两个时间之间的分钟数
@@ -78,12 +59,20 @@ exports.main = async (event: { year: number; month: number }) => {
   const openid = wxContext.OPENID!;
   const { year, month } = event;
 
-  const today = getToday();
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0); // 月末
+  const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+  const monthStart = dayjs()
+    .year(year)
+    .month(month - 1)
+    .date(1)
+    .format("YYYY-MM-DD");
+  const monthEnd = dayjs()
+    .year(year)
+    .month(month - 1)
+    .endOf("month")
+    .format("YYYY-MM-DD");
 
   // T+1: 统计截止到昨天
-  const statsEndDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const statsEndDate = dayjs(today).subtract(1, "day").format("YYYY-MM-DD");
 
   // 如果统计截止日期早于月初，说明本月还没开始统计
   if (statsEndDate < monthStart) {
@@ -120,26 +109,27 @@ exports.main = async (event: { year: number; month: number }) => {
     .get();
 
   const holidays = holidayRes.data as Holiday[];
-  const holidayMap = new Map(holidays.map((h) => [h.date.getTime(), h.type]));
+  const holidayMap = new Map(holidays.map((h) => [h.date, h.type]));
 
   // 计算工作日列表
-  const workdays: Date[] = [];
-  const current = new Date(monthStart);
+  const workdays: string[] = [];
+  let current = dayjs(monthStart);
 
-  while (current <= actualEndDate) {
-    const holidayType = holidayMap.get(current.getTime());
+  while (current.format("YYYY-MM-DD") <= actualEndDate) {
+    const dateKey = current.format("YYYY-MM-DD");
+    const holidayType = holidayMap.get(dateKey);
 
     if (holidayType === "workday") {
       // 调休工作日
-      workdays.push(new Date(current));
+      workdays.push(dateKey);
     } else if (holidayType === "holiday") {
       // 节假日，不是工作日
-    } else if (!isWeekend(current)) {
+    } else if (!isWeekend(dateKey)) {
       // 普通工作日（周一到周五）
-      workdays.push(new Date(current));
+      workdays.push(dateKey);
     }
 
-    current.setDate(current.getDate() + 1);
+    current = current.add(1, "day");
   }
 
   // 获取打卡记录
@@ -153,14 +143,14 @@ exports.main = async (event: { year: number; month: number }) => {
     .get();
 
   const records = recordRes.data as ClockRecord[];
-  const recordMap = new Map(records.map((r) => [r.date.getTime(), r]));
+  const recordMap = new Map(records.map((r) => [r.date, r]));
 
   // 计算总工时
   let totalMinutes = 0;
   let recordedDays = 0;
 
   for (const workday of workdays) {
-    const record = recordMap.get(workday.getTime());
+    const record = recordMap.get(workday);
 
     // 使用打卡时间或默认时间
     const startTime = record?.startTime

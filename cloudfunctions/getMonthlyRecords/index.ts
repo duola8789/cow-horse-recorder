@@ -1,5 +1,10 @@
 // 云函数入口文件
 const cloud = require("wx-server-sdk");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -11,7 +16,7 @@ const _ = db.command;
 interface ClockRecord {
   _id: string;
   _openid: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   startTime: Date | null;
   endTime: Date | null;
   startFrom: "clock" | "default";
@@ -28,7 +33,7 @@ interface User {
 
 interface Holiday {
   _id: string;
-  date: Date;
+  date: string; // "YYYY-MM-DD"
   type: "workday" | "holiday";
 }
 
@@ -36,7 +41,6 @@ type DailyStatus =
   | "recorded"
   | "partial"
   | "default"
-  | "missing"
   | "rest"
   | "leave"
   | "today";
@@ -58,96 +62,23 @@ interface DailyRecord {
   minutes: number | null; // 557
 }
 
-// 北京时间偏移量 (UTC+8)
-const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-// 获取北京时间的今天 00:00:00 (UTC+8)
-// 云函数运行在 UTC 时区，需要手动转换
-function getToday(): Date {
-  const now = new Date();
-  // 转换为北京时间
-  const beijingTime = new Date(now.getTime() + BEIJING_OFFSET_MS);
-  // 获取北京时间的年月日
-  const year = beijingTime.getUTCFullYear();
-  const month = beijingTime.getUTCMonth();
-  const day = beijingTime.getUTCDate();
-  // 返回北京时间当天 00:00:00 对应的 UTC 时间
-  return new Date(Date.UTC(year, month, day) - BEIJING_OFFSET_MS);
-}
-
 // 判断是否是周末
-function isWeekend(date: Date): boolean {
-  const day = date.getDay();
+function isWeekend(dateStr: string): boolean {
+  const day = dayjs(dateStr).day();
   return day === 0 || day === 6;
 }
 
-// 格式化日期为 YYYY-MM-DD (用作 Map key，确保时间戳对比一致)
-function formatDateKey(date: Date): string {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-// 格式化日期为 YYYY-MM-DD
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-// 格式化时间为 HH:mm (转换为北京时间 UTC+8)
-// 微信云数据库返回的 Date 字段内部存储的是 UTC 时间戳
-// 需要手动转换为北京时间显示
+// 格式化时间为 HH:mm（将 Date 对象转换为北京时间显示）
 function formatTime(date: Date | unknown): string | null {
   if (!date) return null;
-
-  let timestamp: number;
-
-  if (date instanceof Date) {
-    // 如果是 Date 对象，直接获取时间戳
-    timestamp = date.getTime();
-  } else if (typeof date === "number") {
-    // 如果是数字时间戳
-    timestamp = date;
-  } else if (typeof date === "string") {
-    // 如果是字符串，需要判断是否带时区
-    if (date.includes("Z") || date.includes("+") || date.includes("T")) {
-      // ISO 格式或带时区，直接解析
-      timestamp = new Date(date).getTime();
-    } else {
-      // 无时区的本地时间字符串，需要当作北京时间处理
-      // 云数据库可能返回 "2026-04-10 19:45:26" 这种格式
-      // 这实际上是北京时间，不需要再转换
-      const parts = date.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
-      if (parts) {
-        const hours = parts[4].padStart(2, "0");
-        const minutes = parts[5].padStart(2, "0");
-        return `${hours}:${minutes}`;
-      }
-      timestamp = new Date(date).getTime();
-    }
-  } else {
-    // 其他情况，尝试转换
-    timestamp = new Date(date as any).getTime();
-  }
-
-  // 将 UTC 时间戳转换为北京时间
-  const utc8 = new Date(timestamp + BEIJING_OFFSET_MS);
-  const hours = String(utc8.getUTCHours()).padStart(2, "0");
-  const minutes = String(utc8.getUTCMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
+  const d = dayjs(date as any);
+  if (!d.isValid()) return null;
+  return d.tz("Asia/Shanghai").format("HH:mm");
 }
 
-// 解析时间字符串 "HH:mm" 到当天的 Date
-function parseTimeToDate(timeStr: string, baseDate: Date): Date {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return new Date(
-    baseDate.getFullYear(),
-    baseDate.getMonth(),
-    baseDate.getDate(),
-    hours,
-    minutes,
-  );
+// 将时间字符串 "HH:mm" 转为指定日期的 Date 对象（北京时间）
+function parseTimeToDate(timeStr: string, dateStr: string): Date {
+  return dayjs.tz(`${dateStr} ${timeStr}`, "Asia/Shanghai").toDate();
 }
 
 // 计算两个时间之间的分钟数
@@ -171,9 +102,17 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
     return { success: false, error: "Invalid year or month" };
   }
 
-  const today = getToday();
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0); // 月末
+  const today = dayjs().tz("Asia/Shanghai").format("YYYY-MM-DD");
+  const monthStart = dayjs()
+    .year(year)
+    .month(month - 1)
+    .date(1)
+    .format("YYYY-MM-DD");
+  const monthEnd = dayjs()
+    .year(year)
+    .month(month - 1)
+    .endOf("month")
+    .format("YYYY-MM-DD");
   // 只显示到当天，不显示未来日期
   const displayEnd = monthEnd < today ? monthEnd : today;
 
@@ -198,10 +137,7 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
     .get();
 
   const holidays = holidayRes.data as Holiday[];
-  // P1 fix: 使用日期字符串作为 Map key，避免时间戳对比问题
-  const holidayMap = new Map(
-    holidays.map((h) => [formatDateKey(h.date), h.type]),
-  );
+  const holidayMap = new Map(holidays.map((h) => [h.date, h.type]));
 
   // 获取打卡记录
   const recordRes = await db
@@ -213,14 +149,11 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
     .get();
 
   const clockRecords = recordRes.data as ClockRecord[];
-  // P1 fix: 使用日期字符串作为 Map key
-  const recordMap = new Map(
-    clockRecords.map((r) => [formatDateKey(r.date), r]),
-  );
+  const recordMap = new Map(clockRecords.map((r) => [r.date, r]));
 
   // 构建每日记录
   const dailyRecords: DailyRecord[] = [];
-  const current = new Date(monthStart);
+  let current = dayjs(monthStart);
 
   // 用于计算汇总统计
   let totalMinutes = 0;
@@ -228,13 +161,13 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
   let totalWorkDays = 0;
 
   // T+1: 统计截止到昨天
-  const statsEndDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const statsEndDate = dayjs(today).subtract(1, "day").format("YYYY-MM-DD");
 
-  while (current <= displayEnd) {
-    const dateKey = formatDateKey(current);
+  while (current.format("YYYY-MM-DD") <= displayEnd) {
+    const dateKey = current.format("YYYY-MM-DD");
     const holidayType = holidayMap.get(dateKey);
     const clockRecord = recordMap.get(dateKey);
-    const isCurrentToday = current.getTime() === today.getTime();
+    const isCurrentToday = dateKey === today;
 
     // 判断是否是工作日
     let isWorkday = false;
@@ -242,7 +175,7 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
       isWorkday = true;
     } else if (holidayType === "holiday") {
       isWorkday = false;
-    } else if (!isWeekend(current)) {
+    } else if (!isWeekend(dateKey)) {
       isWorkday = true;
     }
 
@@ -266,17 +199,10 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
       }
 
       // 计算当天工作时长
-      // 注意：云函数运行在 UTC 时区，需要转换为北京时间 (UTC+8) 进行比较
-      const nowUtc = new Date();
-      const nowUtc8 = new Date(nowUtc.getTime() + 8 * 60 * 60 * 1000);
-      // 构造今天的默认下班时间点（北京时间）
-      const [defEndHour, defEndMin] = defaultEndTime.split(":").map(Number);
-      const defaultEndDateUtc8 = new Date(
-        nowUtc8.getUTCFullYear(),
-        nowUtc8.getUTCMonth(),
-        nowUtc8.getUTCDate(),
-        defEndHour,
-        defEndMin,
+      const nowBj = dayjs().tz("Asia/Shanghai");
+      const defaultEndDateBj = dayjs.tz(
+        `${dateKey} ${defaultEndTime}`,
+        "Asia/Shanghai",
       );
 
       if (clockRecord?.startTime) {
@@ -286,15 +212,12 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
         if (clockRecord.endTime) {
           // 有下班卡
           actualEnd = new Date(clockRecord.endTime);
-        } else if (nowUtc8 < defaultEndDateUtc8) {
+        } else if (nowBj.isBefore(defaultEndDateBj)) {
           // 无下班卡，当前时间未超过默认下班时间
-          actualEnd = nowUtc;
+          actualEnd = new Date();
         } else {
           // 无下班卡，当前时间已超过默认下班时间
-          // 需要将默认下班时间转回 UTC 用于计算
-          actualEnd = new Date(
-            defaultEndDateUtc8.getTime() - 8 * 60 * 60 * 1000,
-          );
+          actualEnd = defaultEndDateBj.toDate();
         }
 
         const mins = diffMinutes(actualStart, actualEnd);
@@ -304,7 +227,7 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
         }
       } else if (clockRecord?.endTime) {
         // 无上班卡，有下班卡
-        const actualStart = parseTimeToDate(defaultStartTime, current);
+        const actualStart = parseTimeToDate(defaultStartTime, dateKey);
         const actualEnd = new Date(clockRecord.endTime);
         const mins = diffMinutes(actualStart, actualEnd);
         if (mins > 0) {
@@ -334,10 +257,10 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
       // 使用打卡时间或默认时间
       const actualStartTime = clockRecord.startTime
         ? new Date(clockRecord.startTime)
-        : parseTimeToDate(defaultStartTime, current);
+        : parseTimeToDate(defaultStartTime, dateKey);
       const actualEndTime = clockRecord.endTime
         ? new Date(clockRecord.endTime)
-        : parseTimeToDate(defaultEndTime, current);
+        : parseTimeToDate(defaultEndTime, dateKey);
 
       startTime = formatTime(actualStartTime);
       endTime = formatTime(actualEndTime);
@@ -358,8 +281,8 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
       startFrom = "default";
       endFrom = "default";
 
-      const actualStartTime = parseTimeToDate(defaultStartTime, current);
-      const actualEndTime = parseTimeToDate(defaultEndTime, current);
+      const actualStartTime = parseTimeToDate(defaultStartTime, dateKey);
+      const actualEndTime = parseTimeToDate(defaultEndTime, dateKey);
       const mins = diffMinutes(actualStartTime, actualEndTime);
       if (mins > 0) {
         minutes = mins;
@@ -370,7 +293,7 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
     // 统计汇总（只统计到昨天的工作日）
     if (
       isWorkday &&
-      current <= statsEndDate &&
+      dateKey <= statsEndDate &&
       status !== "leave" &&
       status !== "today"
     ) {
@@ -384,9 +307,9 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
     }
 
     dailyRecords.push({
-      date: formatDate(current),
-      day: current.getDate(),
-      dayOfWeek: current.getDay(),
+      date: dateKey,
+      day: current.date(),
+      dayOfWeek: current.day(),
       isWorkday,
       isToday: isCurrentToday,
       status,
@@ -400,7 +323,7 @@ exports.main = async (event: { year?: unknown; month?: unknown }) => {
       minutes,
     });
 
-    current.setDate(current.getDate() + 1);
+    current = current.add(1, "day");
   }
 
   // 按日期倒序排列
