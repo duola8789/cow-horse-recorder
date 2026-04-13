@@ -138,3 +138,22 @@ export async function getMonthlyRecords(
   })
   return res.result as MonthlyRecordsResponse
 }
+
+// 更新打卡记录请求参数
+export interface UpdateRecordRequest {
+  date: string // "2026-04-10"
+  startTime?: string | null // "09:30"
+  endTime?: string | null // "18:30"
+  status: 'normal' | 'leave'
+}
+
+// 更新打卡记录
+export async function updateRecord(
+  data: UpdateRecordRequest
+): Promise<{ success: boolean; record?: ClockRecord; error?: string }> {
+  const res = await Taro.cloud.callFunction({
+    name: 'updateRecord',
+    data,
+  })
+  return res.result as { success: boolean; record?: ClockRecord; error?: string }
+}

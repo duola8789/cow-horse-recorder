@@ -1,11 +1,18 @@
 import type { DailyRecord, MonthlyRecordsResponse } from '@/services/api'
 import type { GlobalData } from '@/app'
-import { ScrollView, Text, View } from '@tarojs/components'
-import Taro, { useDidShow } from '@tarojs/taro'
+import { Picker, ScrollView, Text, View } from '@tarojs/components'
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useCallback, useEffect, useState } from 'react'
-import { getMonthlyRecords, login } from '@/services/api'
+import { getMonthlyRecords, login, updateRecord } from '@/services/api'
 import { getCurrentYearMonth } from '@/utils/date'
 import './index.scss'
+
+// 编辑表单状态
+interface EditFormState {
+  status: 'normal' | 'leave'
+  startTime: string
+  endTime: string
+}
 
 // 获取全局登录 Promise 的辅助函数
 async function waitForLogin(): Promise<void> {
@@ -75,6 +82,7 @@ function getStatusText(record: DailyRecord): string {
 
 // 内存缓存：按 year-month 存储数据
 const dataCache = new Map<string, MonthlyRecordsResponse>()
+const MAX_CACHE_SIZE = 6 // 最多缓存6个月的数据
 
 export default function Stats() {
   const [loading, setLoading] = useState(true)
@@ -84,6 +92,11 @@ export default function Stats() {
   const [selectedRecord, setSelectedRecord] = useState<DailyRecord | null>(null)
   const [sheetVisible, setSheetVisible] = useState(false)
   const [isFirstLoad, setIsFirstLoad] = useState(true)
+
+  // 编辑模式状态
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState<EditFormState | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const cacheKey = `${yearMonth.year}-${yearMonth.month}`
 
@@ -103,7 +116,11 @@ export default function Stats() {
       try {
         await waitForLogin()
         const result = await getMonthlyRecords(yearMonth.year, yearMonth.month)
-        // 更新缓存
+        // 更新缓存（限制缓存大小）
+        if (dataCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = dataCache.keys().next().value
+          if (firstKey) dataCache.delete(firstKey)
+        }
         dataCache.set(cacheKey, result)
         setData(result)
       } catch (error) {
@@ -148,7 +165,16 @@ export default function Stats() {
       // 无缓存：显示 loading
       loadData(true)
     }
-  }, [yearMonth.year, yearMonth.month, cacheKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yearMonth.year, yearMonth.month])
+
+  // 下拉刷新
+  usePullDownRefresh(async () => {
+    // 清除当月缓存，强制刷新
+    dataCache.delete(cacheKey)
+    await loadData(false)
+    Taro.stopPullDownRefresh()
+  })
 
   // 切换到上个月
   const handlePrevMonth = () => {
@@ -200,13 +226,78 @@ export default function Stats() {
 
   // 关闭弹窗
   const closeSheet = () => {
+    if (isEditing) {
+      // 编辑模式下先退出编辑
+      setIsEditing(false)
+      setEditForm(null)
+    }
     setSheetVisible(false)
     setTimeout(() => setSelectedRecord(null), SHEET_ANIMATION_DURATION)
   }
 
-  // 点击编辑按钮
-  const handleEditClick = () => {
-    Taro.showToast({ title: '编辑功能即将上线', icon: 'none' })
+  // 进入编辑模式
+  const enterEditMode = () => {
+    if (!selectedRecord) return
+    setEditForm({
+      status: selectedRecord.status === 'leave' ? 'leave' : 'normal',
+      startTime: selectedRecord.startTime || selectedRecord.defaultStartTime,
+      endTime: selectedRecord.endTime || selectedRecord.defaultEndTime,
+    })
+    setIsEditing(true)
+  }
+
+  // 退出编辑模式
+  const exitEditMode = () => {
+    setIsEditing(false)
+    setEditForm(null)
+  }
+
+  // 处理状态切换
+  const handleStatusChange = (status: 'normal' | 'leave') => {
+    if (!editForm) return
+    setEditForm({ ...editForm, status })
+  }
+
+  // 处理时间选择
+  const handleTimeChange = (field: 'startTime' | 'endTime', value: string) => {
+    if (!editForm) return
+    setEditForm({ ...editForm, [field]: value })
+  }
+
+  // 保存编辑
+  const handleSave = async () => {
+    if (!selectedRecord || !editForm) return
+
+    // 前端校验：正常状态下上班时间必须早于下班时间
+    if (editForm.status === 'normal' && editForm.startTime >= editForm.endTime) {
+      Taro.showToast({ title: '上班时间必须早于下班时间', icon: 'none' })
+      return
+    }
+
+    setSaving(true)
+    try {
+      const result = await updateRecord({
+        date: selectedRecord.date,
+        status: editForm.status,
+        startTime: editForm.status === 'normal' ? editForm.startTime : null,
+        endTime: editForm.status === 'normal' ? editForm.endTime : null,
+      })
+
+      if (result.success) {
+        Taro.showToast({ title: '保存成功', icon: 'success' })
+        // 清除缓存并刷新数据
+        dataCache.delete(cacheKey)
+        closeSheet()
+        loadData(false)
+      } else {
+        Taro.showToast({ title: result.error || '保存失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('保存失败:', error)
+      Taro.showToast({ title: '保存失败，请重试', icon: 'none' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -317,63 +408,138 @@ export default function Stats() {
               <Text className="sheet-title">
                 {selectedRecord.day}日 {WEEKDAY_NAMES[selectedRecord.dayOfWeek]}
               </Text>
-              <Text className={`sheet-status ${selectedRecord.status}`}>
-                {selectedRecord.status === 'recorded' && '✓ 已记录'}
-                {selectedRecord.status === 'partial' && '部分打卡'}
-                {selectedRecord.status === 'default' && '使用默认'}
-                {selectedRecord.status === 'missing' && '漏打卡'}
-                {selectedRecord.status === 'leave' && '请假'}
-                {selectedRecord.status === 'today' && '进行中'}
-              </Text>
+              {!isEditing && (
+                <Text className={`sheet-status ${selectedRecord.status}`}>
+                  {selectedRecord.status === 'recorded' && '✓ 已记录'}
+                  {selectedRecord.status === 'partial' && '部分打卡'}
+                  {selectedRecord.status === 'default' && '使用默认'}
+                  {selectedRecord.status === 'missing' && '漏打卡'}
+                  {selectedRecord.status === 'leave' && '请假'}
+                  {selectedRecord.status === 'today' && '进行中'}
+                </Text>
+              )}
             </View>
 
             <View className="sheet-body">
-              {/* 上班打卡 */}
-              <View className="clock-item">
-                <View className="clock-header">
-                  <Text className="clock-icon">😢</Text>
-                  <Text className="clock-label">上班打卡</Text>
-                </View>
-                <View className="clock-content">
-                  <Text className="clock-time">{selectedRecord.startTime || '—'}</Text>
-                  <Text className={`clock-source ${selectedRecord.startFrom || ''}`}>
-                    {selectedRecord.startFrom === 'clock' && '🟢 实际打卡'}
-                    {selectedRecord.startFrom === 'default' && '🟡 默认时间'}
-                    {!selectedRecord.startFrom && '未打卡'}
-                  </Text>
-                </View>
-                <Text className="clock-default">默认: {selectedRecord.defaultStartTime}</Text>
-              </View>
+              {isEditing && editForm ? (
+                <>
+                  {/* 编辑模式 */}
+                  {/* 状态选择 */}
+                  <View className="edit-section">
+                    <Text className="edit-label">状态</Text>
+                    <View className="status-options">
+                      <View
+                        className={`status-option ${editForm.status === 'normal' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('normal')}
+                      >
+                        <Text className="status-option-text">正常</Text>
+                      </View>
+                      <View
+                        className={`status-option ${editForm.status === 'leave' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('leave')}
+                      >
+                        <Text className="status-option-text">请假</Text>
+                      </View>
+                    </View>
+                  </View>
 
-              {/* 下班打卡 */}
-              <View className="clock-item">
-                <View className="clock-header">
-                  <Text className="clock-icon">😊</Text>
-                  <Text className="clock-label">下班打卡</Text>
-                </View>
-                <View className="clock-content">
-                  <Text className="clock-time">{selectedRecord.endTime || '—'}</Text>
-                  <Text className={`clock-source ${selectedRecord.endFrom || ''}`}>
-                    {selectedRecord.endFrom === 'clock' && '🟢 实际打卡'}
-                    {selectedRecord.endFrom === 'default' && '🟡 默认时间'}
-                    {!selectedRecord.endFrom && '未打卡'}
-                  </Text>
-                </View>
-                <Text className="clock-default">默认: {selectedRecord.defaultEndTime}</Text>
-              </View>
+                  {/* 时间选择器（仅正常状态显示） */}
+                  {editForm.status === 'normal' && (
+                    <>
+                      <View className="edit-section">
+                        <Text className="edit-label">上班时间</Text>
+                        <Picker
+                          mode="time"
+                          value={editForm.startTime}
+                          onChange={(e) => handleTimeChange('startTime', e.detail.value)}
+                        >
+                          <View className="time-picker">
+                            <Text className="time-value">{editForm.startTime}</Text>
+                            <Text className="time-arrow">▼</Text>
+                          </View>
+                        </Picker>
+                      </View>
 
-              {/* 工作时长 */}
-              <View className="duration-section">
-                <Text className="duration-label">工作时长:</Text>
-                <Text className="duration-value">
-                  {formatMinutesToDuration(selectedRecord.minutes)}
-                </Text>
-              </View>
+                      <View className="edit-section">
+                        <Text className="edit-label">下班时间</Text>
+                        <Picker
+                          mode="time"
+                          value={editForm.endTime}
+                          onChange={(e) => handleTimeChange('endTime', e.detail.value)}
+                        >
+                          <View className="time-picker">
+                            <Text className="time-value">{editForm.endTime}</Text>
+                            <Text className="time-arrow">▼</Text>
+                          </View>
+                        </Picker>
+                      </View>
+                    </>
+                  )}
 
-              {/* 编辑按钮 */}
-              <View className="edit-button disabled" onClick={handleEditClick}>
-                <Text className="edit-text">编辑</Text>
-              </View>
+                  {/* 编辑操作按钮 */}
+                  <View className="edit-actions">
+                    <View className="edit-action cancel" onClick={exitEditMode}>
+                      <Text className="edit-action-text">取消</Text>
+                    </View>
+                    <View
+                      className={`edit-action save ${saving ? 'disabled' : ''}`}
+                      onClick={handleSave}
+                    >
+                      <Text className="edit-action-text">{saving ? '保存中...' : '保存'}</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* 查看模式 */}
+                  {/* 上班打卡 */}
+                  <View className="clock-item">
+                    <View className="clock-header">
+                      <Text className="clock-icon">😢</Text>
+                      <Text className="clock-label">上班打卡</Text>
+                    </View>
+                    <View className="clock-content">
+                      <Text className="clock-time">{selectedRecord.startTime || '—'}</Text>
+                      <Text className={`clock-source ${selectedRecord.startFrom || ''}`}>
+                        {selectedRecord.startFrom === 'clock' && '🟢 实际打卡'}
+                        {selectedRecord.startFrom === 'default' && '🟡 默认时间'}
+                        {!selectedRecord.startFrom && '未打卡'}
+                      </Text>
+                    </View>
+                    <Text className="clock-default">默认: {selectedRecord.defaultStartTime}</Text>
+                  </View>
+
+                  {/* 下班打卡 */}
+                  <View className="clock-item">
+                    <View className="clock-header">
+                      <Text className="clock-icon">😊</Text>
+                      <Text className="clock-label">下班打卡</Text>
+                    </View>
+                    <View className="clock-content">
+                      <Text className="clock-time">{selectedRecord.endTime || '—'}</Text>
+                      <Text className={`clock-source ${selectedRecord.endFrom || ''}`}>
+                        {selectedRecord.endFrom === 'clock' && '🟢 实际打卡'}
+                        {selectedRecord.endFrom === 'default' && '🟡 默认时间'}
+                        {!selectedRecord.endFrom && '未打卡'}
+                      </Text>
+                    </View>
+                    <Text className="clock-default">默认: {selectedRecord.defaultEndTime}</Text>
+                  </View>
+
+                  {/* 工作时长 */}
+                  <View className="duration-section">
+                    <Text className="duration-label">工作时长:</Text>
+                    <Text className="duration-value">
+                      {formatMinutesToDuration(selectedRecord.minutes)}
+                    </Text>
+                  </View>
+
+                  {/* 编辑按钮 */}
+                  <View className="edit-button" onClick={enterEditMode}>
+                    <Text className="edit-text">编辑</Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </View>
