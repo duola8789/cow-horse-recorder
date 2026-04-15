@@ -91,4 +91,4 @@
 - [x] 11.4 提交代码：`git commit -m "feat: migrate to local storage"`
 - [x] 11.5 推送到远程：`git push && git push --tags`
 - [x] 11.6 构建生产版本
-- [ ] 11.7 小程序后台提交审核（手动操作）
+- [x] 11.7 小程序后台提交审核（手动操作）
