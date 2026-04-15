@@ -16,6 +16,7 @@ export default antfu(
     rules: {
       "no-console": "off", // 允许 console
       "perfectionist/sort-imports": "off", // 使用 Prettier 管理 import 顺序
+      "perfectionist/sort-named-imports": "off", // 使用 Prettier 管理 import 顺序
     },
   },
   {

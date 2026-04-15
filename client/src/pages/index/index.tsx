@@ -1,9 +1,11 @@
-import type { GlobalData } from '@/app'
-import type { ClockRecord } from '@/services/api'
 import { Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { clock, getTodayStatus, login } from '@/services/api'
+import { ClockService } from '@/services/clockService'
+import { HolidayService } from '@/services/holidayService'
+import { Storage } from '@/utils/storage'
+import { STORAGE_KEYS } from '@/constants/storage'
+import type { ClockRecord, UserSettings } from '@/types/data'
 import {
   calculateWorkMinutes,
   formatDateChinese,
@@ -12,20 +14,10 @@ import {
   formatTimeWithSeconds,
   isMorning,
 } from '@/utils/date'
+import dayjs from 'dayjs'
 import './index.scss'
 
 type ClockType = 'start' | 'end'
-
-// 获取全局登录 Promise 的辅助函数
-async function waitForLogin(): Promise<void> {
-  const app = Taro.getApp<{ globalData: GlobalData }>()
-  if (app?.globalData?.loginPromise) {
-    await app.globalData.loginPromise
-  } else {
-    // 如果 globalData 还没准备好，直接调用 login
-    await login()
-  }
-}
 
 export default function Index() {
   const [loading, setLoading] = useState(false)
@@ -35,7 +27,7 @@ export default function Index() {
   const [clockType, setClockType] = useState<ClockType>(() => (isMorning() ? 'start' : 'end'))
   const [currentTime, setCurrentTime] = useState(new Date())
   const [defaultStartTime, setDefaultStartTime] = useState('09:30')
-  const [defaultEndTime, setDefaultEndTime] = useState('18:30')
+  const [defaultEndTime, setDefaultEndTime] = useState('19:30')
 
   // 实时时钟 (秒级更新用于显示时间，分钟级用于时长计算)
   useEffect(() => {
@@ -63,15 +55,24 @@ export default function Index() {
       setPageLoading(true)
     }
     try {
-      // 等待全局登录完成
-      await waitForLogin()
+      // 获取今日打卡记录
+      const todayRecord = ClockService.getTodayRecord()
+      setRecord(todayRecord)
 
-      // 获取今日状态
-      const status = await getTodayStatus()
-      setRecord(status.record)
-      setIsWorkday(status.isWorkday)
-      setDefaultStartTime(status.defaultStartTime)
-      setDefaultEndTime(status.defaultEndTime)
+      // 判断今天是否为工作日
+      const today = dayjs().format('YYYY-MM-DD')
+      const workday = HolidayService.isWorkday(today)
+      setIsWorkday(workday)
+
+      // 获取用户设置
+      const settings =
+        Storage.get<UserSettings>(STORAGE_KEYS.USER_SETTINGS) || {
+          defaultStartTime: '09:30',
+          defaultEndTime: '19:30',
+          version: '1.0',
+        }
+      setDefaultStartTime(settings.defaultStartTime)
+      setDefaultEndTime(settings.defaultEndTime)
 
       // 根据时间和状态设置默认打卡类型
       if (isMorning()) {
@@ -123,15 +124,18 @@ export default function Index() {
       // 震动反馈
       Taro.vibrateShort({ type: 'medium' })
 
-      const result = await clock(type)
-      setRecord(result.record)
+      // 调用本地打卡服务
+      const updatedRecord = ClockService.clock(type)
+      setRecord(updatedRecord)
+
       Taro.showToast({
         title: type === 'start' ? '上班打卡成功' : '下班打卡成功',
         icon: 'success',
       })
     } catch (error) {
       console.error('打卡失败:', error)
-      Taro.showToast({ title: '打卡失败', icon: 'error' })
+      const errorMessage = error instanceof Error ? error.message : '打卡失败'
+      Taro.showToast({ title: errorMessage, icon: 'none' })
     } finally {
       setLoading(false)
     }

@@ -1,10 +1,10 @@
 import type { PickerSelectorProps } from '@tarojs/components'
-import type { GlobalData } from '@/app'
-import type { User } from '@/services/api'
 import { Picker, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useState } from 'react'
-import { login, updateSettings } from '@/services/api'
+import { Storage } from '@/utils/storage'
+import { STORAGE_KEYS } from '@/constants/storage'
+import type { UserSettings } from '@/types/data'
 import './index.scss'
 
 // 生成时间选项 00:00 - 23:30，每30分钟
@@ -20,68 +20,58 @@ function generateTimeOptions(): string[] {
 
 const timeOptions = generateTimeOptions()
 
-// 获取全局登录 Promise 的辅助函数
-async function waitForLogin(): Promise<User | null> {
-  const app = Taro.getApp<{ globalData: GlobalData }>()
-  if (app?.globalData?.loginPromise) {
-    await app.globalData.loginPromise
-    return app.globalData.user
-  } else {
-    const result = await login()
-    return result.user
-  }
-}
-
 export default function Settings() {
-  const [user, setUser] = useState<User | null>(null)
+  const [settings, setSettings] = useState<UserSettings | null>(null)
 
-  const loadUser = useCallback(async () => {
+  const loadSettings = useCallback(() => {
     try {
-      const userData = await waitForLogin()
-      setUser(userData)
+      const userSettings = Storage.get<UserSettings>(STORAGE_KEYS.USER_SETTINGS)
+      setSettings(
+        userSettings || {
+          defaultStartTime: '09:30',
+          defaultEndTime: '19:30',
+          version: '1.0',
+        }
+      )
     } catch (error) {
-      console.error('加载用户信息失败:', error)
+      console.error('加载设置失败:', error)
     }
   }, [])
 
   useDidShow(() => {
-    loadUser()
+    loadSettings()
   })
 
-  const handleStartTimeChange: PickerSelectorProps['onChange'] = async (e) => {
+  const handleStartTimeChange: PickerSelectorProps['onChange'] = (e) => {
     const index = e.detail.value as number
     const value = timeOptions[index]
-    if (!value || value === user?.defaultStartTime) return
+    if (!value || !settings || value === settings.defaultStartTime) return
 
     try {
-      const result = await updateSettings({ defaultStartTime: value })
-      setUser(result.user)
-      // 同步更新全局状态
-      const app = Taro.getApp<{ globalData: GlobalData }>()
-      if (app?.globalData) {
-        app.globalData.user = result.user
+      const newSettings = { ...settings, defaultStartTime: value }
+      const success = Storage.set(STORAGE_KEYS.USER_SETTINGS, newSettings)
+      if (success) {
+        setSettings(newSettings)
+        Taro.showToast({ title: '保存成功', icon: 'success' })
       }
-      Taro.showToast({ title: '保存成功', icon: 'success' })
     } catch (error) {
       console.error('保存失败:', error)
       Taro.showToast({ title: '保存失败', icon: 'error' })
     }
   }
 
-  const handleEndTimeChange: PickerSelectorProps['onChange'] = async (e) => {
+  const handleEndTimeChange: PickerSelectorProps['onChange'] = (e) => {
     const index = e.detail.value as number
     const value = timeOptions[index]
-    if (!value || value === user?.defaultEndTime) return
+    if (!value || !settings || value === settings.defaultEndTime) return
 
     try {
-      const result = await updateSettings({ defaultEndTime: value })
-      setUser(result.user)
-      // 同步更新全局状态
-      const app = Taro.getApp<{ globalData: GlobalData }>()
-      if (app?.globalData) {
-        app.globalData.user = result.user
+      const newSettings = { ...settings, defaultEndTime: value }
+      const success = Storage.set(STORAGE_KEYS.USER_SETTINGS, newSettings)
+      if (success) {
+        setSettings(newSettings)
+        Taro.showToast({ title: '保存成功', icon: 'success' })
       }
-      Taro.showToast({ title: '保存成功', icon: 'success' })
     } catch (error) {
       console.error('保存失败:', error)
       Taro.showToast({ title: '保存失败', icon: 'error' })
@@ -97,8 +87,8 @@ export default function Settings() {
     })
   }
 
-  const startTimeIndex = timeOptions.indexOf(user?.defaultStartTime || '09:00')
-  const endTimeIndex = timeOptions.indexOf(user?.defaultEndTime || '18:30')
+  const startTimeIndex = timeOptions.indexOf(settings?.defaultStartTime || '09:30')
+  const endTimeIndex = timeOptions.indexOf(settings?.defaultEndTime || '19:30')
 
   return (
     <View className="settings">
@@ -114,13 +104,13 @@ export default function Settings() {
           <Picker
             mode="selector"
             range={timeOptions}
-            value={startTimeIndex >= 0 ? startTimeIndex : 18}
+            value={startTimeIndex >= 0 ? startTimeIndex : 19}
             onChange={handleStartTimeChange}
           >
             <View className="setting-item">
               <Text className="item-icon">☀️</Text>
               <Text className="item-label">默认上班时间</Text>
-              <Text className="item-value">{user?.defaultStartTime || '09:30'}</Text>
+              <Text className="item-value">{settings?.defaultStartTime || '09:30'}</Text>
               <Text className="item-arrow">›</Text>
             </View>
           </Picker>
@@ -133,7 +123,7 @@ export default function Settings() {
             <View className="setting-item">
               <Text className="item-icon">🌙</Text>
               <Text className="item-label">默认下班时间</Text>
-              <Text className="item-value">{user?.defaultEndTime || '18:30'}</Text>
+              <Text className="item-value">{settings?.defaultEndTime || '19:30'}</Text>
               <Text className="item-arrow">›</Text>
             </View>
           </Picker>

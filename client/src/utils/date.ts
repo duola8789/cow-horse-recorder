@@ -12,10 +12,15 @@ export function isMorning(): boolean {
   return dayjs().hour() < 12
 }
 
-// 格式化时间 HH:mm
-export function formatTime(date: Date | null | undefined): string {
-  if (!date) return '--:--'
-  return dayjs(date).format('HH:mm')
+// 格式化时间 HH:mm（支持时间戳、Date 对象、"HH:mm" 字符串）
+export function formatTime(time: number | Date | string | null | undefined): string {
+  if (!time) return '--:--'
+  // 如果已经是 "HH:mm" 格式的字符串，直接返回
+  if (typeof time === 'string' && /^\d{2}:\d{2}$/.test(time)) {
+    return time
+  }
+  // 时间戳或 Date 对象
+  return dayjs(time).format('HH:mm')
 }
 
 // 格式化时间带秒 HH:mm:ss
@@ -46,55 +51,52 @@ export function getCurrentYearMonth(): { year: number; month: number } {
 
 // 计算工作时长接口
 export interface ClockRecordForDuration {
-  startTime?: Date | string | null
-  endTime?: Date | string | null
+  startTime?: number | null  // 时间戳（毫秒）
+  endTime?: number | null    // 时间戳（毫秒）
 }
 
 // 计算工作时长（分钟）
 export function calculateWorkMinutes(
   record: ClockRecordForDuration | null,
-  defaultStartTime: string,
-  defaultEndTime: string,
+  defaultStartTime: string,  // "HH:mm" 格式
+  defaultEndTime: string,    // "HH:mm" 格式
   now: Date
 ): number | null {
   if (!record?.startTime && !record?.endTime) {
     return null
   }
 
-  // 解析默认时间为今日的 Date
-  const parseTime = (timeStr: string): Date => {
+  // 将 "HH:mm" 转换为今天的时间戳
+  const parseTimeToTimestamp = (timeStr: string): number => {
     const [hours, minutes] = timeStr.split(':').map(Number)
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+    return dayjs(now).hour(hours).minute(minutes).second(0).millisecond(0).valueOf()
   }
 
-  const defaultEnd = parseTime(defaultEndTime)
-  const defaultStart = parseTime(defaultStartTime)
+  const nowTimestamp = now.getTime()
+  const defaultStartTimestamp = parseTimeToTimestamp(defaultStartTime)
 
-  let startDate: Date
-  let endDate: Date
+  let startTimestamp: number
+  let endTimestamp: number
 
   if (record?.startTime) {
-    startDate = new Date(record.startTime)
+    startTimestamp = record.startTime
 
     if (record.endTime) {
       // 有上班卡，有下班卡
-      endDate = new Date(record.endTime)
-    } else if (now < defaultEnd) {
-      // 有上班卡，无下班卡，当前时间未超过默认下班时间
-      endDate = now
+      endTimestamp = record.endTime
     } else {
-      // 有上班卡，无下班卡，当前时间已超过默认下班时间
-      endDate = defaultEnd
+      // 有上班卡，无下班卡：始终使用当前时间（实时计算）
+      endTimestamp = nowTimestamp
     }
   } else if (record?.endTime) {
     // 无上班卡，有下班卡
-    startDate = defaultStart
-    endDate = new Date(record.endTime)
+    startTimestamp = defaultStartTimestamp
+    endTimestamp = record.endTime
   } else {
     return null
   }
 
-  const diffMs = endDate.getTime() - startDate.getTime()
+  const diffMs = endTimestamp - startTimestamp
   return Math.max(0, Math.round(diffMs / 1000 / 60))
 }
 

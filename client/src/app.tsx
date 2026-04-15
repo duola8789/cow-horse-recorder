@@ -1,47 +1,55 @@
 import type { PropsWithChildren } from 'react'
-import type { User } from '@/services/api'
-import { cloud } from '@tarojs/taro'
 import { Component } from 'react'
-import { login } from '@/services/api'
+import { Storage } from '@/utils/storage'
+import { STORAGE_KEYS } from '@/constants/storage'
+import { HolidayService } from '@/services/holidayService'
+import { ClockService } from '@/services/clockService'
+import type { UserSettings, ClockRecords } from '@/types/data'
 import './app.scss'
 
-// 全局数据类型定义
-export interface GlobalData {
-  isLoggedIn: boolean
-  user: User | null
-  loginPromise: Promise<void> | null
-}
+const DATA_VERSION = '1.0'
 
 class App extends Component<PropsWithChildren> {
-  // 全局数据
-  globalData: GlobalData = {
-    isLoggedIn: false,
-    user: null,
-    loginPromise: null,
-  }
-
   componentDidMount() {
-    // 初始化云开发
-    if (process.env.TARO_ENV === 'weapp') {
-      cloud.init({
-        env: 'cloud1-5g9r86c3f7706e47',
-        traceUser: true,
-      })
-    }
+    // 初始化本地数据
+    this.initLocalData()
 
-    // 启动时执行登录
-    this.globalData.loginPromise = this.doLogin()
+    // 初始化打卡服务（补全未完成的打卡记录）
+    ClockService.init()
+
+    // 初始化节假日数据
+    HolidayService.init()
   }
 
-  async doLogin() {
-    try {
-      const result = await login()
-      if (result.success) {
-        this.globalData.isLoggedIn = true
-        this.globalData.user = result.user
+  /**
+   * 初始化本地数据
+   * 首次启动时创建默认数据
+   */
+  initLocalData() {
+    // 检查数据版本
+    const version = Storage.get<string>(STORAGE_KEYS.DATA_VERSION)
+
+    if (!version) {
+      // 首次启动，初始化默认数据
+
+      // 初始化用户设置
+      const defaultSettings: UserSettings = {
+        defaultStartTime: '09:30',
+        defaultEndTime: '19:30',
+        version: DATA_VERSION,
       }
-    } catch (error) {
-      console.error('登录失败:', error)
+      Storage.set(STORAGE_KEYS.USER_SETTINGS, defaultSettings)
+
+      // 初始化打卡记录（空对象）
+      const emptyRecords: ClockRecords = {}
+      Storage.set(STORAGE_KEYS.CLOCK_RECORDS, emptyRecords)
+
+      // 设置数据版本
+      Storage.set(STORAGE_KEYS.DATA_VERSION, DATA_VERSION)
+    } else if (version !== DATA_VERSION) {
+      // 数据版本不匹配，需要升级
+      // TODO: 未来如果需要数据迁移，在这里实现
+      Storage.set(STORAGE_KEYS.DATA_VERSION, DATA_VERSION)
     }
   }
 
