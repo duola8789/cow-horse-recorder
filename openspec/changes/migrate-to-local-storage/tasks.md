@@ -87,8 +87,8 @@
 
 - [x] 11.1 删除所有调试日志
 - [x] 11.2 更新版本号（package.json → 2.0.0）
-- [ ] 11.3 创建 git tag：`git tag v1.1.4-before-migration`
-- [ ] 11.4 提交代码：`git commit -m "feat: migrate to local storage"`
-- [ ] 11.5 推送到远程：`git push && git push --tags`
-- [ ] 11.6 构建生产版本
-- [ ] 11.7 小程序后台提交审核
+- [x] 11.3 创建 git tag：`git tag v1.1.4-before-migration`
+- [x] 11.4 提交代码：`git commit -m "feat: migrate to local storage"`
+- [x] 11.5 推送到远程：`git push && git push --tags`
+- [x] 11.6 构建生产版本
+- [ ] 11.7 小程序后台提交审核（手动操作）
