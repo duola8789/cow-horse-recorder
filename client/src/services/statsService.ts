@@ -305,7 +305,12 @@ export class StatsService {
       if (record?.status === 'leave') {
         status = 'leave'
       } else if (!isWorkday) {
-        status = 'rest'
+        // 休息日：如果有打卡记录则为加班，否则为休息
+        if (record?.startTime || record?.endTime) {
+          status = 'overtime'
+        } else {
+          status = 'rest'
+        }
       } else if (record?.startTime && record?.endTime) {
         status = 'recorded'
       } else if (record?.startTime || record?.endTime) {
@@ -346,8 +351,8 @@ export class StatsService {
         endFrom: record?.endFrom || 'default',
         defaultStartTime: settings.defaultStartTime,
         defaultEndTime: settings.defaultEndTime,
-        hours: isWorkday && status !== 'leave' ? hours : null,
-        minutes: isWorkday && status !== 'leave' ? minutes : null,
+        hours: status !== 'leave' && status !== 'rest' ? hours : null,
+        minutes: status !== 'leave' && status !== 'rest' ? minutes : null,
       })
 
       current = current.add(1, 'day')

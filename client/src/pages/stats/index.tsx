@@ -78,6 +78,8 @@ function getStatusIcon(record: DailyRecord): { icon: string; tip: string } {
       return { icon: '🔴', tip: '漏打卡' }
     case 'leave':
       return { icon: '🔵', tip: '请假' }
+    case 'overtime':
+      return { icon: '🟠', tip: '加班' }
     case 'today':
       return { icon: '🟢', tip: '进行中' } // 今天没有任何打卡，显示绿球
     case 'rest':
@@ -92,6 +94,25 @@ function getStatusText(record: DailyRecord): string {
     // 检查是否是特殊节假日
     const holidayName = HolidayService.getHolidayName(record.date)
     return holidayName ? `休息日（${holidayName}）` : '休息日'
+  }
+  if (record.status === 'overtime') {
+    // 加班日：显示打卡时间
+    const holidayName = HolidayService.getHolidayName(record.date)
+    const overtimeLabel = holidayName ? `加班（${holidayName}）` : '加班'
+    if (record.startTime && record.endTime) {
+      const startTimeStr = dayjs(record.startTime).format('HH:mm')
+      const endTimeStr = dayjs(record.endTime).format('HH:mm')
+      return `${startTimeStr} - ${endTimeStr} ${overtimeLabel}`
+    }
+    if (record.startTime && !record.endTime) {
+      const startTimeStr = dayjs(record.startTime).format('HH:mm')
+      return `${startTimeStr} - ${record.defaultEndTime} ${overtimeLabel}`
+    }
+    if (!record.startTime && record.endTime) {
+      const endTimeStr = dayjs(record.endTime).format('HH:mm')
+      return `${record.defaultStartTime} - ${endTimeStr} ${overtimeLabel}`
+    }
+    return overtimeLabel
   }
   if (record.status === 'leave') return '请假'
   if (record.status === 'missing') return '漏打卡'
@@ -549,6 +570,7 @@ export default function Stats() {
                   {selectedRecord.status === 'default' && '使用默认'}
                   {selectedRecord.status === 'missing' && '漏打卡'}
                   {selectedRecord.status === 'leave' && '请假'}
+                  {selectedRecord.status === 'overtime' && '加班'}
                   {selectedRecord.status === 'today' && '进行中'}
                 </Text>
               )}
@@ -647,16 +669,25 @@ export default function Stats() {
               ) : (
                 <>
                   {/* 查看模式 */}
-                  {selectedRecord.status === 'leave' || selectedRecord.status === 'rest' ? (
+                  {selectedRecord.status === 'leave' ? (
                     <>
-                      {/* 请假或休息日：不显示具体时间 */}
+                      {/* 请假：不显示具体时间 */}
                       <View className="status-notice">
-                        <Text className="notice-icon">
-                          {selectedRecord.status === 'leave' ? '🔵' : '😴'}
-                        </Text>
-                        <Text className="notice-text">
-                          {selectedRecord.status === 'leave' ? '请假' : '休息日'}
-                        </Text>
+                        <Text className="notice-icon">🔵</Text>
+                        <Text className="notice-text">请假</Text>
+                      </View>
+
+                      {/* 编辑按钮 */}
+                      <View className="edit-button" onClick={enterEditMode}>
+                        <Text className="edit-text">编辑</Text>
+                      </View>
+                    </>
+                  ) : selectedRecord.status === 'rest' ? (
+                    <>
+                      {/* 休息日：不显示具体时间 */}
+                      <View className="status-notice">
+                        <Text className="notice-icon">😴</Text>
+                        <Text className="notice-text">休息日</Text>
                       </View>
 
                       {/* 编辑按钮 */}
