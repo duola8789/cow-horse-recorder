@@ -150,6 +150,32 @@ import { login } from "../../services/api";
 - Taro 配置：`client/config/index.ts` 中的 `alias` 字段
 - TypeScript：`client/tsconfig.json` 中的 `paths` 字段
 
+### Emoji 表情（禁止直接使用字符）
+
+**禁止**在代码中直接使用 emoji 字符（如 `😢`、`😊`、`☀️`、`🔔`、`🟢` 等）。原因：Android 真机系统 emoji 字体在微信小程序渲染层可能不可用，会导致所有 emoji 显示为方框（已踩坑，且无法通过 `font-family` 修复）。
+
+**替代方案**：使用 `@/utils/emoji` 的 `EMOJI` 模块，通过 `<Image>` 组件渲染 OpenMoji 彩色 SVG（base64 data URI 内嵌，不依赖系统字体）。
+
+```tsx
+// ❌ 禁止 - 直接用 emoji 字符
+<Text className="icon">😢</Text>
+<Text>📅 每日明细</Text>
+
+// ✅ 推荐 - 用 EMOJI 模块
+import { Image } from '@tarojs/components'
+import { EMOJI } from '@/utils/emoji'
+
+<Image className="icon" src={EMOJI.sad} />
+
+// emoji 与文字混排时,用 View + Image + Text 组合
+<View className="title">
+  <Image className="title-icon" src={EMOJI.calendar} />
+  <Text>每日明细</Text>
+</View>
+```
+
+**新增 emoji 时**：从 [OpenMoji](https://openmoji.org)（CC BY-SA 4.0，需署名）下载对应 SVG 到 `client/src/assets/emoji/`（文件名为 Unicode 码点，如 `1F622.svg`），再用 base64 重新生成 `src/utils/emoji.ts`。`<Image>` 必须在 scss 中设置 `width`/`height`（`font-size` 对 Image 无效）。
+
 ## 节假日同步
 
 应用启动时会自动初始化节假日数据：
@@ -169,5 +195,6 @@ import { login } from "../../services/api";
 - 调试需要微信开发者工具
 - ESLint 使用 @antfu/eslint-config，格式化已内置
 - **编辑代码后运行 `npm run format` 保持代码风格一致**
+- **禁止直接使用 emoji 字符**：Android 真机会显示为方框，必须用 `@/utils/emoji` 的 `EMOJI` 模块渲染（见「代码规范 > Emoji 表情」）
 - 数据存储在本地，换设备会丢失（未来可增加云备份功能）
 - Storage 最大 10MB，预计可存储 50 年的打卡数据

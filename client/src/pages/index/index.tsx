@@ -1,8 +1,9 @@
-import { Text, View } from '@tarojs/components'
+import { Image, Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ClockService } from '@/services/clockService'
 import { HolidayService } from '@/services/holidayService'
+import { EMOJI } from '@/utils/emoji'
 import { Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants/storage'
 import type { ClockRecord, UserSettings } from '@/types/data'
@@ -65,12 +66,11 @@ export default function Index() {
       setIsWorkday(workday)
 
       // 获取用户设置
-      const settings =
-        Storage.get<UserSettings>(STORAGE_KEYS.USER_SETTINGS) || {
-          defaultStartTime: '09:30',
-          defaultEndTime: '19:30',
-          version: '1.0',
-        }
+      const settings = Storage.get<UserSettings>(STORAGE_KEYS.USER_SETTINGS) || {
+        defaultStartTime: '09:30',
+        defaultEndTime: '19:30',
+        version: '1.0',
+      }
       setDefaultStartTime(settings.defaultStartTime)
       setDefaultEndTime(settings.defaultEndTime)
 
@@ -225,7 +225,7 @@ export default function Index() {
             className={`clock-button ${clockType === 'start' ? 'start-mode' : 'end-mode'} ${loading ? 'loading' : ''}`}
             onClick={!loading ? handleClock : undefined}
           >
-            <Text className="button-icon">{clockType === 'start' ? '😢' : '😊'}</Text>
+            <Image className="button-icon" src={clockType === 'start' ? EMOJI.sad : EMOJI.smile} />
             <Text className="button-text">
               {loading ? '打卡中...' : clockType === 'start' ? '上班打卡' : '下班打卡'}
             </Text>
@@ -236,7 +236,7 @@ export default function Index() {
             <View className="duration-card">
               <Text className="duration-label">今日已工作</Text>
               <View className="duration-value">
-                <Text className="duration-icon">⏱️</Text>
+                <Image className="duration-icon" src={EMOJI.stopwatch} />
                 <Text className="duration-text">
                   {duration.hours} 小时 {duration.minutes} 分
                 </Text>
@@ -247,14 +247,14 @@ export default function Index() {
           {/* 打卡状态卡片 */}
           <View className="status-card">
             <View className={`status-item ${record?.startTime ? 'checked' : ''}`}>
-              <Text className="status-icon">😢</Text>
+              <Image className="status-icon" src={EMOJI.sad} />
               <Text className="status-label">上班</Text>
               <Text className="status-time">{formatTime(record?.startTime)}</Text>
               <Text className="status-state">{record?.startTime ? '已打卡 ✓' : '未打卡'}</Text>
             </View>
             <View className="status-divider" />
             <View className={`status-item ${record?.endTime ? 'checked' : ''}`}>
-              <Text className="status-icon">😊</Text>
+              <Image className="status-icon" src={EMOJI.smile} />
               <Text className="status-label">下班</Text>
               <Text className="status-time">{formatTime(record?.endTime)}</Text>
               <Text className="status-state">{record?.endTime ? '已打卡 ✓' : '未打卡'}</Text>

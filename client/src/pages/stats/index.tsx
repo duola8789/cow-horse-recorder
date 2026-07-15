@@ -1,10 +1,11 @@
-import { Picker, ScrollView, Text, View } from '@tarojs/components'
+import { Image, Picker, ScrollView, Text, View } from '@tarojs/components'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { useCallback, useEffect, useState } from 'react'
 import { StatsService } from '@/services/statsService'
 import { ClockService } from '@/services/clockService'
 import { HolidayService } from '@/services/holidayService'
 import { getCurrentYearMonth, formatTime } from '@/utils/date'
+import { EMOJI } from '@/utils/emoji'
 import dayjs from 'dayjs'
 import './index.scss'
 
@@ -69,19 +70,19 @@ function formatMinutesToDuration(minutes: number | null): string {
 function getStatusIcon(record: DailyRecord): { icon: string; tip: string } {
   switch (record.status) {
     case 'recorded':
-      return { icon: '🟢', tip: '' }
+      return { icon: EMOJI.greenCircle, tip: '' }
     case 'partial':
-      return { icon: '🟡', tip: '部分默认' }
+      return { icon: EMOJI.yellowCircle, tip: '部分默认' }
     case 'default':
-      return { icon: '🟡', tip: '默认' }
+      return { icon: EMOJI.yellowCircle, tip: '默认' }
     case 'missing':
-      return { icon: '🔴', tip: '漏打卡' }
+      return { icon: EMOJI.redCircle, tip: '漏打卡' }
     case 'leave':
-      return { icon: '🔵', tip: '请假' }
+      return { icon: EMOJI.blueCircle, tip: '请假' }
     case 'overtime':
-      return { icon: '🟠', tip: '加班' }
+      return { icon: EMOJI.orangeCircle, tip: '加班' }
     case 'today':
-      return { icon: '🟢', tip: '进行中' } // 今天没有任何打卡，显示绿球
+      return { icon: EMOJI.greenCircle, tip: '进行中' } // 今天没有任何打卡，显示绿球
     case 'rest':
     default:
       return { icon: '', tip: '' }
@@ -141,7 +142,8 @@ function getStatusText(record: DailyRecord): string {
 
   // 过去的日期：有打卡记录
   if (record.startTime && record.endTime) {
-    const defaultSuffix = record.startFrom === 'default' || record.endFrom === 'default' ? ' (部分默认)' : ''
+    const defaultSuffix =
+      record.startFrom === 'default' || record.endFrom === 'default' ? ' (部分默认)' : ''
     const suffix = workdayTag || defaultSuffix
     const startTimeStr = dayjs(record.startTime).format('HH:mm')
     const endTimeStr = dayjs(record.endTime).format('HH:mm')
@@ -352,7 +354,9 @@ export default function Stats() {
         : selectedRecord.defaultStartTime,
       endTime: selectedRecord.endTime
         ? dayjs(selectedRecord.endTime).format('HH:mm')
-        : shouldFillEndTime ? selectedRecord.defaultEndTime : '',
+        : shouldFillEndTime
+          ? selectedRecord.defaultEndTime
+          : '',
     })
     setIsEditing(true)
   }
@@ -504,7 +508,10 @@ export default function Stats() {
           {/* 每日明细 */}
           <View className="daily-section">
             <View className="daily-header" onClick={() => setExpanded(!expanded)}>
-              <Text className="daily-title">📅 每日明细</Text>
+              <View className="daily-title">
+                <Image className="daily-title-icon" src={EMOJI.calendar} />
+                <Text>每日明细</Text>
+              </View>
               <Text className={`daily-arrow ${expanded ? 'expanded' : ''}`}>
                 {expanded ? '▲' : '▼'}
               </Text>
@@ -527,7 +534,7 @@ export default function Stats() {
                       </View>
                       <View className="day-status">
                         {getStatusIcon(record).icon && (
-                          <Text className="status-icon">{getStatusIcon(record).icon}</Text>
+                          <Image className="status-icon" src={getStatusIcon(record).icon} />
                         )}
                         <Text className={`status-text ${record.status}`}>
                           {getStatusText(record)}
@@ -673,7 +680,7 @@ export default function Stats() {
                     <>
                       {/* 请假：不显示具体时间 */}
                       <View className="status-notice">
-                        <Text className="notice-icon">🔵</Text>
+                        <Image className="notice-icon" src={EMOJI.blueCircle} />
                         <Text className="notice-text">请假</Text>
                       </View>
 
@@ -686,7 +693,7 @@ export default function Stats() {
                     <>
                       {/* 休息日：不显示具体时间 */}
                       <View className="status-notice">
-                        <Text className="notice-icon">😴</Text>
+                        <Image className="notice-icon" src={EMOJI.sleep} />
                         <Text className="notice-text">休息日</Text>
                       </View>
 
@@ -701,7 +708,7 @@ export default function Stats() {
                       {/* 上班打卡 */}
                       <View className="clock-item">
                         <View className="clock-header">
-                          <Text className="clock-icon">😢</Text>
+                          <Image className="clock-icon" src={EMOJI.sad} />
                           <Text className="clock-label">上班打卡</Text>
                         </View>
                         <View className="clock-content">
@@ -710,21 +717,33 @@ export default function Stats() {
                               ? formatTime(selectedRecord.startTime)
                               : selectedRecord.defaultStartTime}
                           </Text>
-                          <Text className={`clock-source ${selectedRecord.startFrom || ''}`}>
-                            {selectedRecord.startFrom === 'clock' && '🟢 已打卡'}
-                            {selectedRecord.startFrom === 'default' && '🟡 默认打卡'}
-                            {!selectedRecord.startFrom && '未打卡'}
-                          </Text>
+                          <View className={`clock-source ${selectedRecord.startFrom || ''}`}>
+                            {selectedRecord.startFrom === 'clock' && (
+                              <>
+                                <Image className="source-icon" src={EMOJI.greenCircle} />
+                                <Text>已打卡</Text>
+                              </>
+                            )}
+                            {selectedRecord.startFrom === 'default' && (
+                              <>
+                                <Image className="source-icon" src={EMOJI.yellowCircle} />
+                                <Text>默认打卡</Text>
+                              </>
+                            )}
+                            {!selectedRecord.startFrom && <Text>未打卡</Text>}
+                          </View>
                         </View>
                         {selectedRecord.startFrom !== 'clock' && (
-                          <Text className="clock-default">默认: {selectedRecord.defaultStartTime}</Text>
+                          <Text className="clock-default">
+                            默认: {selectedRecord.defaultStartTime}
+                          </Text>
                         )}
                       </View>
 
                       {/* 下班打卡 */}
                       <View className="clock-item">
                         <View className="clock-header">
-                          <Text className="clock-icon">😊</Text>
+                          <Image className="clock-icon" src={EMOJI.smile} />
                           <Text className="clock-label">下班打卡</Text>
                         </View>
                         <View className="clock-content">
@@ -732,17 +751,31 @@ export default function Stats() {
                             {selectedRecord.endTime
                               ? formatTime(selectedRecord.endTime)
                               : selectedRecord.isToday
-                              ? '进行中'
-                              : selectedRecord.defaultEndTime}
+                                ? '进行中'
+                                : selectedRecord.defaultEndTime}
                           </Text>
-                          <Text className={`clock-source ${selectedRecord.endFrom || ''}`}>
-                            {selectedRecord.endFrom === 'clock' && '🟢 已打卡'}
-                            {selectedRecord.endFrom === 'default' && '🟡 默认打卡'}
-                            {!selectedRecord.endFrom && (selectedRecord.isToday ? '' : '未打卡')}
-                          </Text>
+                          <View className={`clock-source ${selectedRecord.endFrom || ''}`}>
+                            {selectedRecord.endFrom === 'clock' && (
+                              <>
+                                <Image className="source-icon" src={EMOJI.greenCircle} />
+                                <Text>已打卡</Text>
+                              </>
+                            )}
+                            {selectedRecord.endFrom === 'default' && (
+                              <>
+                                <Image className="source-icon" src={EMOJI.yellowCircle} />
+                                <Text>默认打卡</Text>
+                              </>
+                            )}
+                            {!selectedRecord.endFrom && !selectedRecord.isToday && (
+                              <Text>未打卡</Text>
+                            )}
+                          </View>
                         </View>
                         {selectedRecord.endFrom !== 'clock' && !selectedRecord.isToday && (
-                          <Text className="clock-default">默认: {selectedRecord.defaultEndTime}</Text>
+                          <Text className="clock-default">
+                            默认: {selectedRecord.defaultEndTime}
+                          </Text>
                         )}
                       </View>
 

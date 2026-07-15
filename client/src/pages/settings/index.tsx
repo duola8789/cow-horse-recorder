@@ -1,7 +1,8 @@
 import type { PickerSelectorProps } from '@tarojs/components'
-import { Picker, Text, View } from '@tarojs/components'
+import { Image, Picker, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useCallback, useState } from 'react'
+import { EMOJI } from '@/utils/emoji'
 import { Storage } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants/storage'
 import type { UserSettings } from '@/types/data'
@@ -95,7 +96,7 @@ export default function Settings() {
       {/* 默认时间设置 */}
       <View className="section-card">
         <View className="section-header">
-          <Text className="section-icon">⏰</Text>
+          <Image className="section-icon" src={EMOJI.alarm} />
           <Text className="section-title">默认时间设置</Text>
         </View>
         <Text className="section-desc">忘记打卡时，将使用以下时间计算工时</Text>
@@ -108,7 +109,7 @@ export default function Settings() {
             onChange={handleStartTimeChange}
           >
             <View className="setting-item">
-              <Text className="item-icon">☀️</Text>
+              <Image className="item-icon" src={EMOJI.sun} />
               <Text className="item-label">默认上班时间</Text>
               <Text className="item-value">{settings?.defaultStartTime || '09:30'}</Text>
               <Text className="item-arrow">›</Text>
@@ -121,7 +122,7 @@ export default function Settings() {
             onChange={handleEndTimeChange}
           >
             <View className="setting-item">
-              <Text className="item-icon">🌙</Text>
+              <Image className="item-icon" src={EMOJI.moon} />
               <Text className="item-label">默认下班时间</Text>
               <Text className="item-value">{settings?.defaultEndTime || '19:30'}</Text>
               <Text className="item-arrow">›</Text>
@@ -133,20 +134,20 @@ export default function Settings() {
       {/* 打卡提醒 */}
       <View className="section-card">
         <View className="section-header">
-          <Text className="section-icon">🔔</Text>
+          <Image className="section-icon" src={EMOJI.bell} />
           <Text className="section-title">打卡提醒</Text>
         </View>
         <Text className="section-desc">开启后将在对应时间发送微信通知提醒打卡</Text>
 
         <View className="setting-list">
           <View className="setting-item" onClick={handleReminderClick}>
-            <Text className="item-icon">☀️</Text>
+            <Image className="item-icon" src={EMOJI.sun} />
             <Text className="item-label">上班打卡提醒</Text>
             <Text className="item-value coming-soon">即将上线</Text>
             <Text className="item-arrow">›</Text>
           </View>
           <View className="setting-item" onClick={handleReminderClick}>
-            <Text className="item-icon">🌙</Text>
+            <Image className="item-icon" src={EMOJI.moon} />
             <Text className="item-label">下班打卡提醒</Text>
             <Text className="item-value coming-soon">即将上线</Text>
             <Text className="item-arrow">›</Text>
@@ -157,20 +158,23 @@ export default function Settings() {
       {/* 关于 */}
       <View className="section-card">
         <View className="section-header">
-          <Text className="section-icon">ℹ️</Text>
+          <Image className="section-icon" src={EMOJI.info} />
           <Text className="section-title">关于</Text>
         </View>
 
         <View className="setting-list about-version">
           <View className="setting-item">
-            <Text className="item-icon">📱</Text>
+            <Image className="item-icon" src={EMOJI.phone} />
             <Text className="item-label">当前版本</Text>
             <Text className="item-value">v{APP_VERSION}</Text>
           </View>
         </View>
 
         <View className="about-content">
-          <Text className="about-emoji">🐮🐴</Text>
+          <View className="about-emoji">
+            <Image src={EMOJI.cow} />
+            <Image src={EMOJI.horse} />
+          </View>
           <Text className="about-name">牛马工时记录器</Text>
           <Text className="about-slogan">珍惜卖命的每一秒</Text>
         </View>

@@ -168,3 +168,5 @@ A: 当前使用占位图标，请替换 `client/src/assets/icons/` 中的图片
 ## License
 
 MIT
+
+项目内使用的 Emoji 图标来自 [OpenMoji](https://openmoji.org)，遵循 CC BY-SA 4.0 协议。
