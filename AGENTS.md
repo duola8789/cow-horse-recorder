@@ -176,6 +176,12 @@ import { EMOJI } from '@/utils/emoji'
 
 **新增 emoji 时**：从 [OpenMoji](https://openmoji.org)（CC BY-SA 4.0，需署名）下载对应 SVG 到 `client/src/assets/emoji/`（文件名为 Unicode 码点，如 `1F622.svg`），再用 base64 重新生成 `src/utils/emoji.ts`。`<Image>` 必须在 scss 中设置 `width`/`height`（`font-size` 对 Image 无效）。
 
+## 版本号管理
+
+**版本号定义在 `client/package.json` 的 `version` 字段**——设置页「关于」显示的版本号由 `client/config/index.ts` 从它读取并注入 `APP_VERSION`。
+
+⚠️ **根目录 `package.json`（cow-horse-recorder-root）也有 `version` 字段，升级时必须同时修改两个文件，保持一致。** 曾多次只改 client 漏改根，导致根 package.json version 落后、工作树残留未提交改动。提交前用 `grep '"version"' package.json client/package.json` 确认两者一致。
+
 ## 节假日同步
 
 应用启动时会自动初始化节假日数据：
@@ -196,5 +202,6 @@ import { EMOJI } from '@/utils/emoji'
 - ESLint 使用 @antfu/eslint-config，格式化已内置
 - **编辑代码后运行 `npm run format` 保持代码风格一致**
 - **禁止直接使用 emoji 字符**：Android 真机会显示为方框，必须用 `@/utils/emoji` 的 `EMOJI` 模块渲染（见「代码规范 > Emoji 表情」）
+- **升级版本号时，`client/package.json` 和根 `package.json` 两个都要改**，保持一致（见「版本号管理」）
 - 数据存储在本地，换设备会丢失（未来可增加云备份功能）
 - Storage 最大 10MB，预计可存储 50 年的打卡数据
