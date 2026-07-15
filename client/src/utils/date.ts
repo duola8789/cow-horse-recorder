@@ -51,15 +51,15 @@ export function getCurrentYearMonth(): { year: number; month: number } {
 
 // 计算工作时长接口
 export interface ClockRecordForDuration {
-  startTime?: number | null  // 时间戳（毫秒）
-  endTime?: number | null    // 时间戳（毫秒）
+  startTime?: number | null // 时间戳（毫秒）
+  endTime?: number | null // 时间戳（毫秒）
 }
 
 // 计算工作时长（分钟）
 export function calculateWorkMinutes(
   record: ClockRecordForDuration | null,
-  defaultStartTime: string,  // "HH:mm" 格式
-  defaultEndTime: string,    // "HH:mm" 格式
+  defaultStartTime: string, // "HH:mm" 格式
+  defaultEndTime: string, // "HH:mm" 格式
   now: Date
 ): number | null {
   if (!record?.startTime && !record?.endTime) {

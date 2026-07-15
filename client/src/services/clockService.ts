@@ -40,12 +40,7 @@ export class ClockService {
       // 如果有上班卡但没下班卡，自动填充默认下班时间
       if (record.startTime && !record.endTime && record.status === 'normal') {
         const [hour, minute] = settings.defaultEndTime.split(':').map(Number)
-        record.endTime = dayjs(date)
-          .hour(hour)
-          .minute(minute)
-          .second(0)
-          .millisecond(0)
-          .valueOf()
+        record.endTime = dayjs(date).hour(hour).minute(minute).second(0).millisecond(0).valueOf()
         record.endFrom = 'default'
         record.updatedAt = Date.now()
         hasChanges = true
@@ -99,12 +94,7 @@ export class ClockService {
           version: '1.0',
         }
         const [hour, minute] = settings.defaultStartTime.split(':').map(Number)
-        record.startTime = dayjs(today)
-          .hour(hour)
-          .minute(minute)
-          .second(0)
-          .millisecond(0)
-          .valueOf()
+        record.startTime = dayjs(today).hour(hour).minute(minute).second(0).millisecond(0).valueOf()
         record.startFrom = 'default'
       }
 

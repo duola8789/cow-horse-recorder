@@ -57,7 +57,10 @@ export class HolidayService {
         //   }
         // }
         // 需要转换为完整的日期格式
-        const rawData = res.data.holiday as Record<string, { holiday: boolean; date?: string; name?: string }>
+        const rawData = res.data.holiday as Record<
+          string,
+          { holiday: boolean; date?: string; name?: string }
+        >
         const processedData: Record<string, 'holiday' | 'workday'> = {}
 
         Object.keys(rawData).forEach((key) => {

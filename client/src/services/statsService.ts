@@ -157,9 +157,7 @@ export class StatsService {
 
     const totalHours = Math.round((totalMinutes / 60) * 100) / 100
     const avgHoursPerDay =
-      actualWorkDays > 0
-        ? Math.round((totalMinutes / 60 / actualWorkDays) * 100) / 100
-        : 0
+      actualWorkDays > 0 ? Math.round((totalMinutes / 60 / actualWorkDays) * 100) / 100 : 0
 
     return {
       totalWorkDays: workdays.length,

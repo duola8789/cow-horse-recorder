@@ -14,7 +14,7 @@ export class Storage {
   static get<T>(key: string, defaultValue?: T): T | null {
     try {
       const value = Taro.getStorageSync(key)
-      return value !== '' ? value : defaultValue ?? null
+      return value !== '' ? value : (defaultValue ?? null)
     } catch (e) {
       console.error(`[Storage] 读取失败: ${key}`, e)
       return defaultValue ?? null
